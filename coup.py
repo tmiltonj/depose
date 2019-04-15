@@ -1,58 +1,43 @@
 from model import *
 from events import *
+from view import UI
 from collections import deque
 
-class Game():
-    def __init__(self):
-        self.event_queue = deque()
-        self.players = []
-
-        self.turn_number = 0
-        self.active_player = 0
-
-    def setup(self):
-        num_players = 0
-        while (num_players <= 0):
-            try:
-                raw_input = input("Enter number of players: ")
-                num_players = int(raw_input)
-            except NameError as e:
-                print("Enter a number")
-
-        self.players = [Player(self, coins=2) for i in range(num_players)]
-
-    def play(self):
-        self.add_event(
-            Event("Changing turn", self.next_turn)
-        )
-
-        self.add_event(
-            Event(
-                "Turn " + str(self.turn_number), 
-                self.players[self.active_player].start_turn
-            )
-        )
-
-        while True:
-            if (len(self.event_queue) > 0):
-                next_event = self.event_queue.popleft()
-                print(next_event.name)
-                next_event.start()
-            else:
-                break
-
-        print("event_queue empty. Finished")
-
-    def next_turn(self):
-        self.active_player = (self.active_player + 1) % len(self.players)
-
-    def add_event(self, event):
-        self.event_queue.append(event)
 
 def main():
-    coup = Game()
-    coup.setup()
+    ui = UI()
+    coup = Game(ui)
     coup.play()
+
+
+class Game():
+    def __init__(self, ui):
+        self.players = deque()
+        self.ui = ui
+
+    def play(self):
+        num_players = self.ui.get_integer("Enter number of players: ", "Must be between 2 - 6", 2, 6)
+        for i in range(num_players):
+            self.players.append(Player(coins=2)) 
+
+        while len(self.players) > 1:
+            active_player = self.players[0]
+            #action = active_player.choose_action()
+            #action.perform()
+
+            self.cleanup()
+
+            self.players.append(self.players.popleft())
+
+    def cleanup(self):
+        """
+        for p in self.players:
+            if (len(p.cards) <= 0):
+                self.players.remove(p)
+        """
+        self.ui.message("Remove player 0")
+        self.players.popleft()
+
 
 if __name__ == '__main__':
     main()
