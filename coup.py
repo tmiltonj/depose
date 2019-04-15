@@ -1,5 +1,4 @@
-from model import *
-from events import *
+from model import Card, Deck
 from view import UI
 from collections import deque
 
@@ -8,6 +7,20 @@ def main():
     ui = UI()
     coup = Game(ui)
     coup.play()
+
+
+class Player():
+    def __init__(self, coins=0):
+        self.coins = coins
+        self.cards = []
+
+    def choose_action(self):
+        if (self.coins >= 10):
+            print("More than 10 coins, must coup")
+            return "Coup"
+        else:
+            print("Pick an action from the list")
+            return "Action"
 
 
 class Game():
