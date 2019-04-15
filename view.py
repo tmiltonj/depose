@@ -22,7 +22,21 @@ class UI():
     def get_choice(self, prompt, options):
         self.message(prompt)
         for i, opt in enumerate(options, 1):
-            print('{0}) {1}\n'.format(i, opt))
+            print('{0}) {1}'.format(i, opt))
 
-        choice = self.get_integer('', 'Invalid choice', 1, len(options))
-        return choice
+        choice = self.get_integer('Enter selection: ', 'Invalid choice', 1, len(options))
+        return options[choice - 1]
+
+    
+if __name__ == '__main__':
+    ui = UI()
+
+    options = [
+        "Choice One",
+        "Choice Two",
+        "Choice Three"
+    ]
+
+    choice = ui.get_choice("Pick an option", options)
+
+    ui.message("Chose: " + choice)
