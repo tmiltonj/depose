@@ -22,6 +22,11 @@ class Player():
             print("Pick an action from the list")
             return "Action"
 
+    def lose_life(self):
+        print("Lost a life")
+
+    def ambassador(self):
+        print("Ambassadoring")
 
 class Game():
     def __init__(self, ui):
