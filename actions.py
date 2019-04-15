@@ -1,40 +1,40 @@
 class ActionFactory():
     @staticmethod
-    def income(actor):
-        return Income(actor)
+    def salary(actor):
+        return Salary(actor)
 
     @staticmethod
-    def foreign_aid(actor):
-        fa = ForeignAid(actor)
+    def donations(actor):
+        fa = Donations(actor)
         return Blockable(fa)
 
     @staticmethod
-    def tax(actor):
-        tx = Tax(actor)
+    def tithe(actor):
+        tx = Tithe(actor)
         return Callable(tx)
 
     @staticmethod
-    def coup(actor):
-        cp = Coup(actor)
+    def depose(actor):
+        cp = Depose(actor)
         return Targeted(cp)
 
     @staticmethod
-    def steal(actor):
-        st = Steal(actor)
+    def mug(actor):
+        st = Mug(actor)
         st = Blockable(st)
         st = Callable(st)
         return Targeted(st)
 
     @staticmethod
-    def assassinate(actor):
-        assn = Assassinate(actor)
+    def murder(actor):
+        assn = Murder(actor)
         assn = Blockable(assn)
         assn = Callable(assn)
         return Targeted(assn)
 
     @staticmethod
-    def ambassador(actor):
-        amb = Ambassador(actor)
+    def diplomacy(actor):
+        amb = Diplomacy(actor)
         return Callable(amb)
 
 
@@ -47,64 +47,64 @@ class Action():
         raise NotImplementedError()
 
 
-class Income(Action):
+class Salary(Action):
     def do(self, target=None):
         if target is not None:
-            raise ValueError("Income should not be targeted")
+            raise ValueError("Salary should not be targeted")
 
         self.actor.coins += 1
 
 
-class ForeignAid(Action):
+class Donations(Action):
     def do(self, target=None):
         if target is not None:
-            raise ValueError("Foreign Aid should not be targeted")
+            raise ValueError("Donations should not be targeted")
 
         self.actor.coins += 1
 
 
-class Tax(Action):
+class Tithe(Action):
     def do(self, target=None):
         if target is not None:
-            raise ValueError("Tax should not be targeted")
+            raise ValueError("Tithe should not be targeted")
 
         self.actor.coins += 3
 
 
-class Coup(Action):
+class Depose(Action):
     def do(self, target=None):
         if target is None:
-            raise ValueError("Coup must be targeted")
+            raise ValueError("Depose must be targeted")
 
         self.actor.coins -= 7
         target.lose_life()
 
 
-class Steal(Action):
+class Mug(Action):
     def do (self, target=None):
         if target is None:
-            raise ValueError("Steal must be targeted")
+            raise ValueError("Mug must be targeted")
 
         theft_amount = min(2, target.coins)
         self.actor.coins += theft_amount
         target.coins -= theft_amount
 
 
-class Assassinate(Action):
+class Murder(Action):
     def do(self, target=None):
         if target is None:
-            raise ValueError("Assassinate must be targeted")
+            raise ValueError("Murder must be targeted")
 
         self.actor.coins -= 3
         target.lose_life()
 
 
-class Ambassador(Action):
+class Diplomacy(Action):
     def do(self, target=None):
         if target is not None:
-            raise ValueError("Ambassador should not be targeted")
+            raise ValueError("Diplomacy should not be targeted")
 
-        self.actor.ambassador()
+        self.actor.diplomacy()
 
 
 """ DECORATORS """
@@ -151,18 +151,18 @@ class Callable(ActionOption):
 
 
 if __name__ == '__main__':
-    from coup import Player
+    from depose import Player
     player = Player()
     af = ActionFactory
 
     actions = [
-        ("Income", af.income(player)),    
-        ("Foreign Aid", af.foreign_aid(player)),
-        ("Tax", af.tax(player)),
-        ("Coup", af.coup(player)),
-        ("Steal", af.steal(player)),
-        ("Assassinate", af.assassinate(player)),
-        ("Ambassador", af.ambassador(player))
+        ("Salary", af.salary(player)),    
+        ("Donations", af.donations(player)),
+        ("Tithe", af.tithe(player)),
+        ("Depose", af.depose(player)),
+        ("Mug", af.mug(player)),
+        ("Murder", af.murder(player)),
+        ("Diplomacy", af.diplomacy(player))
     ]
 
     for name, act in actions:

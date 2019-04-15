@@ -5,8 +5,8 @@ from collections import deque
 
 def main():
     ui = UI()
-    coup = Game(ui)
-    coup.play()
+    depose = Game(ui)
+    depose.play()
 
 
 class Player():
@@ -16,8 +16,8 @@ class Player():
 
     def choose_action(self):
         if (self.coins >= 10):
-            print("More than 10 coins, must coup")
-            return "Coup"
+            print("More than 10 coins, must depose")
+            return "Depose"
         else:
             print("Pick an action from the list")
             return "Action"
@@ -25,8 +25,9 @@ class Player():
     def lose_life(self):
         print("Lost a life")
 
-    def ambassador(self):
-        print("Ambassadoring")
+    def diplomacy(self):
+        print("Diplomacying")
+
 
 class Game():
     def __init__(self, ui):
