@@ -294,25 +294,3 @@ class Callable(ActionOption):
             return False
         else:
             return (card.name in Callable.action_enablers[self.name])
-
-
-if __name__ == '__main__':
-    import view, model
-    from depose import Player
-    player = Player(view.UI(), model.Deck())
-    ui = view.UI()
-    af = ActionFactory(player, ui)
-
-    actions = [
-        ("Salary", af.salary()),    
-        ("Donations", af.donations()),
-        ("Tithe", af.tithe()),
-        ("Depose", af.depose()),
-        ("Mug", af.mug()),
-        ("Murder", af.murder()),
-        ("Diplomacy", af.diplomacy())
-    ]
-
-    for name, act in actions:
-        print("\nTesting " + name)
-        act.do()
