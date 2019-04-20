@@ -1,6 +1,6 @@
 from src.model import Card, Deck
 from src.view import UI
-from src.actions import *
+from src.actions import ActionFactory
 from collections import deque
 
 def main():
@@ -56,7 +56,15 @@ class Player():
         return choice
 
     def diplomacy(self):
-        print("Diplomacying")
+        self.ui.message("{} does some Diplomacy".format(self.name))
+        self.draw_cards(2)
+        choice_a = self.ui.get_choice('Return 1st card to the deck', self.cards)
+        self.cards.remove(choice_a)
+        choice_b = self.ui.get_choice('Return 2nd card to the deck', self.cards)
+        self.cards.remove(choice_b)
+
+        self.deck.add(choice_a)
+        self.deck.add(choice_b)
 
     def draw_cards(self, number=1):
         for i in range(number):

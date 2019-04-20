@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 from src.depose import Player
 from src.model import Deck
@@ -44,10 +44,23 @@ def test_lose_life(player):
     assert 0 == len(player.cards)
 
 def test_diplomacy(player):
-    # player has same number of cards before / after
+    mock_ui = UI()
+    mock_ui.get_choice = Mock(side_effect=["A", "C"])
+
+    mock_deck = Deck()
+    mock_deck.get = Mock(side_effect=["C", "D"])
+    mock_deck.add = Mock()
+    
+    player.ui = mock_ui
+    player.deck = mock_deck
+    player.cards = ["A"]
     pre = len(player.cards)
+
     player.diplomacy()
+
     assert pre == len(player.cards)
+    assert ["D"] == player.cards
+    mock_deck.add.assert_has_calls([call("A"), call("C")])
 
 def test_draw_cards(player):
     test_cases = [
