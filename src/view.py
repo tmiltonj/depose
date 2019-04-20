@@ -27,6 +27,20 @@ class UI():
         choice = self.get_integer('Enter selection: ', 'Invalid choice', 1, len(options))
         return options[choice - 1]
 
+    def get_confirm(self, prompt):
+        valid_answers = ['Y', 'N']
+
+        self.message(prompt)
+        self.message("(Y)es / (N)o? ")
+        choice = input().upper()
+        while (len(choice) <= 0 or choice[0] not in valid_answers):
+            self.error("Invalid option")
+            self.message(prompt)
+            self.message("(Y)es / (N)o? ")
+            choice = input().upper()
+
+        return choice[0].upper() == 'Y'
+
     
 if __name__ == '__main__':
     ui = UI()

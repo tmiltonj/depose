@@ -10,27 +10,46 @@ def main():
 
 
 class Player():
-    actions = {
-        "Salary":       ActionFactory.salary,
-        "Donations":    ActionFactory.donations,
-        "Tithe":        ActionFactory.tithe,
-        "Depose":       ActionFactory.depose,
-        "Mug":          ActionFactory.mug,
-        "Murder":       ActionFactory.murder,
-        "Diplomacy":    ActionFactory.diplomacy
-    }
-
-    def __init__(self, ui, deck, name="Player", coins=0):
+    def __init__(self, ui, deck, game, name="Player", coins=0):
         self.ui = ui
         self.deck = deck
         self.name = name
         self.coins = coins
         self.cards = []
 
+        af = ActionFactory(self, self.ui, game)
+        self.actions = {
+            "Salary":       af.salary,
+            "Donations":    af.donations,
+            "Tithe":        af.tithe,
+            "Depose":       af.depose,
+            "Mug":          af.mug,
+            "Murder":       af.murder,
+            "Diplomacy":    af.diplomacy
+        }
+
+    def __str__(self):
+        return "{} (Coins: {}, Cards: {})".format(self.name, self.coins, len(self.cards))
+
     def choose_action(self):
         action_list = self._get_action_list()
         choice = self.ui.get_choice('Select an action: ', action_list)
-        return Player.actions[choice](self)
+        return self.actions[choice]()
+
+    def called_out(self, action):
+        revealed = self.ui.get_choice(
+            "Your {} was called out, reveal a card: ".format(action.name),
+            self.cards
+        )
+
+        if action.is_performed_by(revealed):
+            self.cards.remove(revealed)
+            self.deck.add(revealed)
+            self.cards.append(self.deck.get())
+            return True
+        else:
+            self.lose_life(revealed)
+            return False
 
     def _get_action_list(self):
         if self.coins >= 10:
@@ -49,11 +68,12 @@ class Player():
 
         return action_list
 
-    def lose_life(self):
-        self.ui.message('{} lost a life!'.format(self.name))
-        choice = self.ui.get_choice('Choose a card to lose: ', self.cards)
-        self.cards.remove(choice)
-        return choice
+    def lose_life(self, card=None):
+        if card is None:
+            card = self.ui.get_choice("You lost a life, reveal a card: ", self.cards)
+        
+        self.ui.message("{} revealed {}".format(self.name, card))
+        self.cards.remove(card)
 
     def diplomacy(self):
         self.ui.message("{} does some Diplomacy".format(self.name))
@@ -95,7 +115,7 @@ class Game():
 
         num_players = self.ui.get_integer("Enter number of players: ", "Must be between 2 - 6", 2, 6)
         for i in range(num_players):
-            p = Player(self.ui, deck, Game.names[i], coins=2)
+            p = Player(self.ui, deck, self, name=Game.names[i], coins=2)
             p.draw_cards(2)
             self.players.append(p)
 
