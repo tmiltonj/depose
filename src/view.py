@@ -11,7 +11,7 @@ class UI():
             self.message(prompt)
             try:
                 value = int(input())
-            except ValueError as e:
+            except ValueError:
                 self.error("not an integer")
 
             if (value < min or value > max):
