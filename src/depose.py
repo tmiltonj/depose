@@ -1,6 +1,6 @@
-from model import Card, Deck
-from view import UI
-from actions import *
+from src.model import Card, Deck
+from src.view import UI
+from src.actions import *
 from collections import deque
 
 def main():
@@ -28,11 +28,11 @@ class Player():
         self.cards = []
 
     def choose_action(self):
-        action_list = self.get_action_list()
+        action_list = self._get_action_list()
         choice = self.ui.get_choice('Select an action: ', action_list)
         return Player.actions[choice](self)
 
-    def get_action_list(self):
+    def _get_action_list(self):
         if self.coins >= 10:
             return ["Depose"]
 
@@ -50,7 +50,10 @@ class Player():
         return action_list
 
     def lose_life(self):
-        print("Lost a life")
+        self.ui.message('{} lost a life!'.format(self.name))
+        choice = self.ui.get_choice('Choose a card to lose: ', self.cards)
+        self.cards.remove(choice)
+        return choice
 
     def diplomacy(self):
         print("Diplomacying")
