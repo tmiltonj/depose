@@ -75,6 +75,8 @@ class Player():
         self.ui.message("{} revealed {}".format(self.name, card))
         self.cards.remove(card)
 
+        return card
+
     def diplomacy(self):
         self.ui.message("{} does some Diplomacy".format(self.name))
         self.draw_cards(2)

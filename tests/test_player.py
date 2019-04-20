@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, call
 
-from src.depose import Player
+from src.depose import Player, Game
 from src.model import Deck
 from src.view import UI
 
@@ -13,7 +13,9 @@ def player():
     mock_ui = UI()
     mock_ui.get_choice = Mock(side_effect=["A", "B"])
 
-    return Player(ui=mock_ui, deck=mock_deck, name="TestPlayer", coins=2)
+    mock_game = Game(mock_ui)
+
+    return Player(ui=mock_ui, deck=mock_deck, game=mock_game, name="TestPlayer", coins=2)
 
 def test_constructor(player):
     assert "TestPlayer" == player.name
@@ -33,15 +35,16 @@ def test_get_action_list(player):
         assert expected == act_list
 
 def test_lose_life(player):
-    player.cards = ["A", "B"]
+    player.cards = ["A", "B", "C"]
+    player.ui.get_choice = Mock(return_value="A")
 
     revealed = player.lose_life()
     assert "A" == revealed
-    assert 1 == len(player.cards)
+    assert 2 == len(player.cards)
 
-    revealed = player.lose_life()
+    revealed = player.lose_life(card="B")
     assert "B" == revealed
-    assert 0 == len(player.cards)
+    assert 1 == len(player.cards)
 
 def test_diplomacy(player):
     mock_ui = UI()
