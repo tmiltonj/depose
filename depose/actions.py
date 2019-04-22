@@ -14,10 +14,8 @@ class ActionList(Enum):
 
 
 class ActionFactory():
-    def __init__(self, actor, ui, game):
+    def __init__(self, actor=None):
         self.actor = actor
-        self.ui = ui
-        self.game = game
 
     def create(self, action):
         action_map = {
@@ -36,110 +34,109 @@ class ActionFactory():
         return action_map[action]()
 
     def salary(self):
-        return Salary(self.actor, self.ui, self.game)
+        return Salary(actor=self.actor)
 
     def donations(self):
-        d = Donations(self.actor, self.ui, self.game)
+        d = Donations(actor=self.actor)
         return Counterable(d)
 
     def tithe(self):
-        t = Tithe(self.actor, self.ui, self.game)
+        t = Tithe(actor=self.actor)
         return Questionable(t)
 
     def depose(self):
-        d = Depose(self.actor, self.ui, self.game)
+        d = Depose(actor=self.actor)
         return Targeted(d)
 
     def mug(self):
-        m = Mug(self.actor, self.ui, self.game)
+        m = Mug(actor=self.actor)
         m = Counterable(m)
         m = Questionable(m)
         return Targeted(m)
 
     def murder(self):
-        m = Murder(self.actor, self.ui, self.game)
+        m = Murder(actor=self.actor)
         m = Counterable(m)
         m = Questionable(m)
         return Targeted(m)
 
     def diplomacy(self):
-        dip = Diplomacy(self.actor, self.ui, self.game)
+        dip = Diplomacy(actor=self.actor)
         return Questionable(dip)
 
     def counter_donations(self):
-        cd = CounterDonations(self.actor, self.ui, self.game)
+        cd = CounterDonations(actor=self.actor)
         return Questionable(cd)
 
     def counter_mug(self):
-        cm = CounterMug(self.actor, self.ui, self.game)
+        cm = CounterMug(actor=self.actor)
         return Questionable(cm)
 
     def counter_murder(self):
-        cm = CounterMurder(self.actor, self.ui, self.game)
+        cm = CounterMurder(actor=self.actor)
         return Questionable(cm)
 
 
 """ BASE ACTIONS """
 class Action():
     name = "Action"
+    description = "Format with {actor}, {target}"
 
-    def __init__(self, actor, ui, game):
+    def __init__(self, actor=None):
         self.actor = actor
-        self.ui = ui
-        self.game = game
 
-    def do(self, target=None):
-        raise NotImplementedError()
+    def do(self, target=None, game=None):
+        return True
 
 
 class Salary(Action):
     name = "Salary"
+    description = "{actor} earned 1 coin"
 
-    def do(self, target=None):
+    def do(self, target=None, game=None):
         if target is not None:
             raise ValueError("Salary should not be targeted")
 
         self.actor.coins += 1
-        self.ui.message("{} earned 1 coin (Coins: {}).".format(self.actor.name, self.actor.coins))
 
         return True
 
 
 class Donations(Action):
     name = "Donations"
+    description = "{actor} received a donation of 2 coins"
 
-    def do(self, target=None):
+    def do(self, target=None, game=None):
         if target is not None:
             raise ValueError("Donations should not be targeted")
 
         self.actor.coins += 2
-        self.ui.message("{} received 2 coins (Coins: {}).".format(self.actor.name, self.actor.coins))
 
         return True
 
 
 class Tithe(Action):
     name = "Tithe"
+    description = "{actor} took a tithe of 3 coins"
 
-    def do(self, target=None):
+    def do(self, target=None, game=None):
         if target is not None:
             raise ValueError("Tithe should not be targeted")
 
         self.actor.coins += 3
-        self.ui.message("{} took a tithe of 3 coins (Coins: {}).".format(self.actor.name, self.actor.coins))
 
         return True
 
 
 class Depose(Action):
     name = "Depose"
+    description = "{actor} deposed {target}"
 
-    def do(self, target=None):
+    def do(self, target=None, game=None):
         if target is None:
             raise ValueError("Depose must be targeted")
 
         self.actor.coins -= 7
-        self.ui.message("{} deposed {}!".format(self.actor.name, target.name))
         target.lose_life()
 
         return True
@@ -147,30 +144,29 @@ class Depose(Action):
 
 class Mug(Action):
     name = "Mug"
+    description = "{actor} mugged {target}"
 
-    def do (self, target=None):
+    def do (self, target=None, game=None):
         if target is None:
             raise ValueError("Mug must be targeted")
 
         theft_amount = min(2, target.coins)
         self.actor.coins += theft_amount
         target.coins -= theft_amount
-        self.ui.message("{} mugged {} for {} coins!".format(
-            self.actor.name, target.name, theft_amount
-        ))
+        self.description = "{actor} mugged {target} for " + theft_amount + " coins"
 
         return True
 
 
 class Murder(Action):
     name = "Murder"
+    description = "{actor} murdered {target}"
 
-    def do(self, target=None):
+    def do(self, target=None, game=None):
         if target is None:
             raise ValueError("Murder must be targeted")
 
         self.actor.coins -= 3
-        self.ui.message("{} murdered {}!".format(self.actor.name, target.name))
         target.lose_life()
 
         return True
@@ -178,100 +174,68 @@ class Murder(Action):
 
 class Diplomacy(Action):
     name = "Diplomacy"
+    description = "{actor} performed diplomacy"
 
-    def do(self, target=None):
+    def do(self, target=None, game=None):
         if target is not None:
             raise ValueError("Diplomacy should not be targeted")
 
-        self.ui.message("{} performed diplomacy.".format(self.actor.name))
-        self.actor.diplomacy()
+        self.actor.draw_cards(2)
+        self.actor.return_card()
+        self.actor.return_card()
 
         return True
 
 
 class CounterDonations(Action):
     name = "Counter Donations"
-
-    def do(self, target=None):
-        return True
-
+    description = "{actor} sabotaged the donation"
 
 class CounterMug(Action):
     name = "Counter Mug"
-
-    def do(self, target=None):
-        return True
-
+    description = "{actor} stopped the mugging"
 
 class CounterMurder(Action):
     name = "Counter Murder"
-
-    def do(self, target=None):
-        return True
+    description = "{actor} prevented the murder"
 
 
 """ DECORATORS """
 class ActionOption(Action):
     def __init__(self, action):
-        super().__init__(action.actor, action.ui, action.game)
+        super().__init__(action.actor)
         self.name = action.name
         self.action = action
 
-    def do(self, target=None):
+    def do(self, target=None, game=None):
         raise NotImplementedError()
 
 
 class Targeted(ActionOption):
-    def do(self, target=None):
-        target = self.get_target()
-        return self.action.do(target)
-
-    def get_target(self):
-        target_list = [p for p in self.game.players if p is not self.actor]
-        choice = self.ui.get_choice(
-            "Choose a target to {}".format(self.name),
-            target_list
-        )
-
-        return choice
+    def do(self, target=None, game=None):
+        target = self.actor.choose_target()
+        return self.action.do(target, game)
 
 
 class Counterable(ActionOption):
-    def do(self, target=None):
-        blocker = self.get_blocker(target)
+    description = "Check if {actor} is countered"
 
-        if blocker is None:
-            self.ui.message("Action not blocked")
-            return self.action.do(target)
+    def do(self, target=None, game=None):
+        opponent = game.ask_for_counters(self)
+        if opponent is None:
+            # No counter > perform action
+            return self.action.do(target, game)
         else:
-            self.ui.message("{}'s {} was blocked by {}".format(self.actor.name, self.name, blocker.name))
-            counter_action = self.get_blocking_action(blocker)
-            if counter_action.do(target):
-                self.ui.message("Action successfully blocked")
+            counter_action = self.get_counter_action(opponent)
+            if counter_action.do(target, game):
+                # Counter, not questioned
                 return False
             else:
-                self.ui.message("Performed {}".format(self.name))
-                return self.action.do(target)
-                
-
-    def get_blocker(self, target=None):
-        if target is None:
-            blocking_list = [p for p in self.game.players if p is not self.actor]
-        else:
-            blocking_list = [target]
-
-        for p in blocking_list:
-            blocked = self.ui.get_confirm(
-                "{}, do you wish to block {}'s {}?".format(p.name, self.actor.name, self.name)
-            )
-
-            if blocked:
-                return p
-
-        return None
+                # Counter, successfully questioned > perform action
+                return self.action.do(target, game)
     
-    def get_blocking_action(self, blocker):
-        af = ActionFactory(blocker, self.ui, self.game)
+    def get_counter_action(self, opponent):
+        af = ActionFactory()
         if self.name == "Donations":
             counter_action = af.counter_donations()
         elif self.name == "Mug":
@@ -281,10 +245,13 @@ class Counterable(ActionOption):
         else:
             raise ValueError("No blocking action exists")
 
+        counter_action.actor = opponent
         return counter_action
 
 
 class Questionable(ActionOption):
+    description = "Check if {actor} is challenged"
+
     action_enablers = {
         "Tithe": ["Lord"],
         "Mug": ["Bandit"],
@@ -295,30 +262,18 @@ class Questionable(ActionOption):
         "Counter Murder": ["Medic"]
     }
 
-    def do(self, target=None):
-        caller = self.get_callout()
+    def do(self, target=None, game=None):
+        opponent = game.ask_for_challenges(self)
 
-        if caller is None:
-            return self.action.do(target)
+        if opponent is None:
+            # No challenge > perform action
+            return self.action.do(target, game)
+        elif game.resolve_challenge(opponent, self):
+            # Challenged successfully (actor did not reveal correct card)
+            return False
         else:
-            self.ui.message("{} called out {}!".format(caller.name, self.name))
-            if self.actor.called_out(self):
-                caller.lose_life()
-                return self.action.do(target)
-            else:
-                return False
-
-    def get_callout(self):
-        calling_list = [p for p in self.game.players if p is not self.actor]
-        for p in calling_list:
-            called = self.ui.get_confirm(
-                "{}, do you wish to call out {}'s {}?".format(p.name, self.actor.name, self.name)
-            )
-
-            if called:
-                return p
-
-        return None
+            # Challenge failed (actor did reveal correct card) > perform action
+            return self.action.do(target)
 
     def is_performed_by(self, card):
         if self.name not in Questionable.action_enablers:
