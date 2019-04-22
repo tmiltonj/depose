@@ -1,14 +1,12 @@
 import random
+from enum import Enum, auto
 
-class Card():
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return self.name
-
-    def __str__(self):
-        return self.name
+class Card(Enum):
+    LORD = auto
+    BANDIT = auto
+    MERCENARY = auto
+    MEDIC = auto
+    DIPLOMAT = auto
 
 class Deck():
     def __init__(self):
@@ -21,17 +19,9 @@ class Deck():
         selection = random.choice(self.cards)
         self.cards.remove(selection)
         return selection
-            
 
-def main():
-    d = Deck()
-    d.add(Card("A"))
-    d.add(Card("B"))
-    d.add(Card("C"))
-
-    print(d.get().name)
-    print(d.get().name)
-    print(d.get().name)
-
-if __name__ == '__main__':
-    main()
+class Player():
+    def __init__(self, name):
+        self.name = name
+        self.coins = 0
+        self.cards = []
