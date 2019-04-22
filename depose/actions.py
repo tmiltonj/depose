@@ -1,51 +1,82 @@
+from enum import Enum, auto
+
+class ActionList(Enum):
+    SALARY = auto
+    DONATIONS = auto
+    TITHE = auto
+    DEPOSE = auto
+    MUG = auto
+    MURDER = auto
+    DIPLOMACY = auto
+    COUNTER_DONATIONS = auto
+    COUNTER_MUG = auto
+    COUNTER_MURDER = auto
+
+
 class ActionFactory():
     def __init__(self, actor, ui, game):
         self.actor = actor
         self.ui = ui
         self.game = game
 
+    def create(self, action):
+        action_map = {
+            ActionList.SALARY: self.salary,
+            ActionList.DONATIONS: self.donations,
+            ActionList.TITHE: self.tithe,
+            ActionList.DEPOSE: self.depose,
+            ActionList.MUG: self.mug,
+            ActionList.MURDER: self.murder,
+            ActionList.DIPLOMACY: self.diplomacy,
+            ActionList.COUNTER_DONATIONS: self.counter_donations,
+            ActionList.COUNTER_MUG: self.counter_mug,
+            ActionList.COUNTER_MURDER: self.counter_murder
+        }
+
+        return action_map[action]()
+
     def salary(self):
         return Salary(self.actor, self.ui, self.game)
 
     def donations(self):
-        fa = Donations(self.actor, self.ui, self.game)
-        return Blockable(fa)
+        d = Donations(self.actor, self.ui, self.game)
+        return Counterable(d)
 
     def tithe(self):
-        tx = Tithe(self.actor, self.ui, self.game)
-        return Callable(tx)
+        t = Tithe(self.actor, self.ui, self.game)
+        return Questionable(t)
 
     def depose(self):
-        cp = Depose(self.actor, self.ui, self.game)
-        return Targeted(cp)
+        d = Depose(self.actor, self.ui, self.game)
+        return Targeted(d)
 
     def mug(self):
-        st = Mug(self.actor, self.ui, self.game)
-        st = Blockable(st)
-        st = Callable(st)
-        return Targeted(st)
+        m = Mug(self.actor, self.ui, self.game)
+        m = Counterable(m)
+        m = Questionable(m)
+        return Targeted(m)
 
     def murder(self):
-        assn = Murder(self.actor, self.ui, self.game)
-        assn = Blockable(assn)
-        assn = Callable(assn)
-        return Targeted(assn)
+        m = Murder(self.actor, self.ui, self.game)
+        m = Counterable(m)
+        m = Questionable(m)
+        return Targeted(m)
 
     def diplomacy(self):
-        amb = Diplomacy(self.actor, self.ui, self.game)
-        return Callable(amb)
+        dip = Diplomacy(self.actor, self.ui, self.game)
+        return Questionable(dip)
 
-    def block_donations(self):
-        bd = BlockDonations(self.actor, self.ui, self.game)
-        return Callable(bd)
+    def counter_donations(self):
+        cd = CounterDonations(self.actor, self.ui, self.game)
+        return Questionable(cd)
 
-    def block_mug(self):
-        bm = BlockMug(self.actor, self.ui, self.game)
-        return Callable(bm)
+    def counter_mug(self):
+        cm = CounterMug(self.actor, self.ui, self.game)
+        return Questionable(cm)
 
-    def block_murder(self):
-        bm = BlockMurder(self.actor, self.ui, self.game)
-        return Callable(bm)
+    def counter_murder(self):
+        cm = CounterMurder(self.actor, self.ui, self.game)
+        return Questionable(cm)
 
 
 """ BASE ACTIONS """
@@ -158,22 +189,22 @@ class Diplomacy(Action):
         return True
 
 
-class BlockDonations(Action):
-    name = "Block Donations"
+class CounterDonations(Action):
+    name = "Counter Donations"
 
     def do(self, target=None):
         return True
 
 
-class BlockMug(Action):
-    name = "Block Mug"
+class CounterMug(Action):
+    name = "Counter Mug"
 
     def do(self, target=None):
         return True
 
 
-class BlockMurder(Action):
-    name = "Block Murder"
+class CounterMurder(Action):
+    name = "Counter Murder"
 
     def do(self, target=None):
         return True
@@ -205,7 +236,7 @@ class Targeted(ActionOption):
         return choice
 
 
-class Blockable(ActionOption):
+class Counterable(ActionOption):
     def do(self, target=None):
         blocker = self.get_blocker(target)
 
@@ -214,8 +245,8 @@ class Blockable(ActionOption):
             return self.action.do(target)
         else:
             self.ui.message("{}'s {} was blocked by {}".format(self.actor.name, self.name, blocker.name))
-            block_action = self.get_blocking_action(blocker)
-            if block_action.do(target):
+            counter_action = self.get_blocking_action(blocker)
+            if counter_action.do(target):
                 self.ui.message("Action successfully blocked")
                 return False
             else:
@@ -242,26 +273,26 @@ class Blockable(ActionOption):
     def get_blocking_action(self, blocker):
         af = ActionFactory(blocker, self.ui, self.game)
         if self.name == "Donations":
-            block_action = af.block_donations()
+            counter_action = af.counter_donations()
         elif self.name == "Mug":
-            block_action = af.block_mug()
+            counter_action = af.counter_mug()
         elif self.name == "Murder":
-            block_action = af.block_murder()
+            counter_action = af.counter_murder()
         else:
             raise ValueError("No blocking action exists")
 
-        return block_action
+        return counter_action
 
 
-class Callable(ActionOption):
+class Questionable(ActionOption):
     action_enablers = {
         "Tithe": ["Lord"],
         "Mug": ["Bandit"],
         "Murder": ["Mercenary"],
         "Diplomacy": ["Diplomat"],
-        "Block Donations": ["Lord"],
-        "Block Mug": ["Bandit", "Diplomat"],
-        "Block Murder": ["Medic"]
+        "Counter Donations": ["Lord"],
+        "Counter Mug": ["Bandit", "Diplomat"],
+        "Counter Murder": ["Medic"]
     }
 
     def do(self, target=None):
@@ -290,7 +321,7 @@ class Callable(ActionOption):
         return None
 
     def is_performed_by(self, card):
-        if self.name not in Callable.action_enablers:
+        if self.name not in Questionable.action_enablers:
             return False
         else:
-            return (card.name in Callable.action_enablers[self.name])
+            return (card.name in Questionable.action_enablers[self.name])

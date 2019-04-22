@@ -1,4 +1,5 @@
 import random
+from actions import ActionList as Actions
 from enum import Enum, auto
 
 class Card(Enum):
@@ -48,29 +49,29 @@ class Player():
         self._cards.append(card)
 
     def __str__(self):
-        return "{} (Coins: {}, Cards: {})".format(self.name, self._coins, len(self._cards))
+        return "{} (Coins: {}, Cards: {})".format(self.name, self._coins, len(self.cards))
 
     def draw_cards(self, number=1):
         for _ in range(number):
-            self._cards.append(self.deck.get())
+            self.add_card(self.deck.get())
 
     def return_card(self, card=None):
         if card is None:
             card = '' # Choose a card
             #self.game.wait_for_input(options=self._cards)
         
-        if card not in self._cards:
+        if card not in self.cards:
             raise ValueError("cannot find {}".format(card))
 
         self.deck.add(card)
-        self._cards.remove(card)
+        self.cards.remove(card)
 
     def reveal_card(self, card=None):
         if card is None:
             card = '' # Choose a card
             #self.game.wait_for_input(options=self._cards)
 
-        if card not in self._cards:
+        if card not in self.cards:
             raise ValueError("Cannot find {}".format(card))
 
         return card
@@ -80,16 +81,36 @@ class Player():
             card = '' # Choose a card
             #self.game.wait_for_input(options=self._cards)
         
-        if card not in self._cards:
+        if card not in self.cards:
             raise ValueError("Cannot find {}".format(card))
 
-        self._cards.remove(card)
+        self.cards.remove(card)
         return card
 
+    def _get_valid_actions(self):
+        if self.coins >= 10:
+            return { "Depose": Actions.DEPOSE }
+
+        actions = { 
+            "Salary": Actions.SALARY, 
+            "Donations": Actions.DONATIONS, 
+            "Tithe": Actions.TITHE,
+            "Mug": Actions.MUG,
+            "Diplomacy": Actions.DIPLOMACY
+        }
+
+        if self.coins >= 3:
+            actions["Murder"] = Actions.MURDER
+        if self.coins >= 7:
+            actions["Depose"] = Actions.DEPOSE
+
+        return actions
+
     def choose_action(self):
-        #action_list = self._get_action_list()
-        #self.game.wait_for_input(action_list)
-        #self.action_factory.create()
+        actions = self._get_valid_actions()
+        choice = "Salary"
+        #choice = self.game.wait_for_input(actions.keys())
+        self.action_factory.create(actions[choice])
         return
 
     def choose_target(self, targets):
