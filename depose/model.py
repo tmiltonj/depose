@@ -3,11 +3,11 @@ from depose.actions import Actions
 from enum import Enum, auto
 
 class Card(Enum):
-    LORD = auto
-    BANDIT = auto
-    MERCENARY = auto
-    MEDIC = auto
-    DIPLOMAT = auto
+    LORD = auto()
+    BANDIT = auto()
+    MERCENARY = auto()
+    MEDIC = auto()
+    DIPLOMAT = auto()
 
 
 class Deck():
@@ -102,9 +102,8 @@ class Player():
     def choose_action(self):
         actions = self._get_valid_actions()
         choice = "Salary"
-        #choice = self.game.wait_for_input(actions.keys())
-        self.action_factory.create(actions[choice])
-        return
+        choice = self.game.wait_for_input(actions.keys())
+        return self.action_factory.create(actions[choice])
 
     def choose_target(self, targets):
         #target = self.game.wait_for_input(targets)

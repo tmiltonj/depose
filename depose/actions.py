@@ -1,24 +1,24 @@
 from enum import Enum, auto
 
 class Result(Enum):
-    SUCCESS = auto
-    FAILURE = auto
-    BLOCKED = auto
-    CHALLENGE_SUCCESS = auto
-    CHALLENGE_FAILURE = auto
+    SUCCESS = auto()
+    FAILURE = auto()
+    BLOCKED = auto()
+    CHALLENGE_SUCCESS = auto()
+    CHALLENGE_FAILURE = auto()
 
 
 class Actions(Enum):
-    SALARY = auto
-    DONATIONS = auto
-    TITHE = auto
-    DEPOSE = auto
-    MUG = auto
-    MURDER = auto
-    DIPLOMACY = auto
-    COUNTER_DONATIONS = auto
-    COUNTER_MUG = auto
-    COUNTER_MURDER = auto
+    SALARY = auto()
+    DONATIONS = auto()
+    TITHE = auto()
+    DEPOSE = auto()
+    MUG = auto()
+    MURDER = auto()
+    DIPLOMACY = auto()
+    COUNTER_DONATIONS = auto()
+    COUNTER_MUG = auto()
+    COUNTER_MURDER = auto()
 
 
 class ActionFactory():
@@ -154,14 +154,14 @@ class Mug(Action):
     name = "Mug"
     description = "{actor} mugged {target}"
 
-    def do (self, target=None, game=None):
+    def perform(self, target=None, game=None):
         if target is None:
             raise ValueError("Mug must be targeted")
 
         theft_amount = min(2, target.coins)
         self.actor.coins += theft_amount
         target.coins -= theft_amount
-        self.description = "{actor} mugged {target} for " + theft_amount + " coins"
+        self.description = "{actor} mugged {target} for " + str(theft_amount) + " coins"
 
         return Result.SUCCESS
 
@@ -238,7 +238,7 @@ class Counterable(ActionModifier):
             return self.action.perform(target, game)
         else:
             counter_action = self.get_counter_action(opponent)
-            if counter_action.perform(target, game):
+            if counter_action.perform(target, game) == Result.SUCCESS:
                 # Counter, not questioned
                 return Result.FAILURE
             else:
