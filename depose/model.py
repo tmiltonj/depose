@@ -55,35 +55,28 @@ class Player():
         for _ in range(number):
             self.add_card(self.deck.get())
 
-    def return_card(self, card=None):
-        if card is None:
-            card = '' # Choose a card
-            #self.game.wait_for_input(options=self._cards)
-        
-        if card not in self.cards:
-            raise ValueError("cannot find {}".format(card))
-
-        self.deck.add(card)
-        self.cards.remove(card)
-
-    def reveal_card(self, card=None):
-        if card is None:
-            card = '' # Choose a card
-            #self.game.wait_for_input(options=self._cards)
-
+    def _choose_card(self):
+        card = '' # Choose a card
+        #self.game.wait_for_input(options=self.cards)
         if card not in self.cards:
             raise ValueError("Cannot find {}".format(card))
 
         return card
 
+    def return_card(self, card=None):
+        if card is None:
+            card = self._choose_card()
+        
+        self.deck.add(card)
+        self.cards.remove(card)
+
+    def resolve_challenge(self, action):
+        return self._choose_card()
+
     def lose_life(self, card=None):
         if card is None:
-            card = '' # Choose a card
-            #self.game.wait_for_input(options=self._cards)
+            card = self._choose_card()
         
-        if card not in self.cards:
-            raise ValueError("Cannot find {}".format(card))
-
         self.cards.remove(card)
         return card
 
