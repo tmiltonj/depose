@@ -1,6 +1,14 @@
 from enum import Enum, auto
 
-class ActionList(Enum):
+class Result(Enum):
+    SUCCESS = auto
+    FAILURE = auto
+    BLOCKED = auto
+    CHALLENGE_SUCCESS = auto
+    CHALLENGE_FAILURE = auto
+
+
+class Actions(Enum):
     SALARY = auto
     DONATIONS = auto
     TITHE = auto
@@ -19,16 +27,16 @@ class ActionFactory():
 
     def create(self, action):
         action_map = {
-            ActionList.SALARY: self.salary,
-            ActionList.DONATIONS: self.donations,
-            ActionList.TITHE: self.tithe,
-            ActionList.DEPOSE: self.depose,
-            ActionList.MUG: self.mug,
-            ActionList.MURDER: self.murder,
-            ActionList.DIPLOMACY: self.diplomacy,
-            ActionList.COUNTER_DONATIONS: self.counter_donations,
-            ActionList.COUNTER_MUG: self.counter_mug,
-            ActionList.COUNTER_MURDER: self.counter_murder
+            Actions.SALARY: self.salary,
+            Actions.DONATIONS: self.donations,
+            Actions.TITHE: self.tithe,
+            Actions.DEPOSE: self.depose,
+            Actions.MUG: self.mug,
+            Actions.MURDER: self.murder,
+            Actions.DIPLOMACY: self.diplomacy,
+            Actions.COUNTER_DONATIONS: self.counter_donations,
+            Actions.COUNTER_MUG: self.counter_mug,
+            Actions.COUNTER_MURDER: self.counter_murder
         }
 
         return action_map[action]()
@@ -85,61 +93,61 @@ class Action():
     def __init__(self, actor=None):
         self.actor = actor
 
-    def do(self, target=None, game=None):
-        return True
+    def perform(self, target=None, game=None):
+        return Result.SUCCESS
 
 
 class Salary(Action):
     name = "Salary"
     description = "{actor} earned 1 coin"
 
-    def do(self, target=None, game=None):
+    def perform(self, target=None, game=None):
         if target is not None:
             raise ValueError("Salary should not be targeted")
 
         self.actor.coins += 1
 
-        return True
+        return Result.SUCCESS
 
 
 class Donations(Action):
     name = "Donations"
     description = "{actor} received a donation of 2 coins"
 
-    def do(self, target=None, game=None):
+    def perform(self, target=None, game=None):
         if target is not None:
             raise ValueError("Donations should not be targeted")
 
         self.actor.coins += 2
 
-        return True
+        return Result.SUCCESS
 
 
 class Tithe(Action):
     name = "Tithe"
     description = "{actor} took a tithe of 3 coins"
 
-    def do(self, target=None, game=None):
+    def perform(self, target=None, game=None):
         if target is not None:
             raise ValueError("Tithe should not be targeted")
 
         self.actor.coins += 3
 
-        return True
+        return Result.SUCCESS
 
 
 class Depose(Action):
     name = "Depose"
     description = "{actor} deposed {target}"
 
-    def do(self, target=None, game=None):
+    def perform(self, target=None, game=None):
         if target is None:
             raise ValueError("Depose must be targeted")
 
         self.actor.coins -= 7
         target.lose_life()
 
-        return True
+        return Result.SUCCESS
 
 
 class Mug(Action):
@@ -155,28 +163,28 @@ class Mug(Action):
         target.coins -= theft_amount
         self.description = "{actor} mugged {target} for " + theft_amount + " coins"
 
-        return True
+        return Result.SUCCESS
 
 
 class Murder(Action):
     name = "Murder"
     description = "{actor} murdered {target}"
 
-    def do(self, target=None, game=None):
+    def perform(self, target=None, game=None):
         if target is None:
             raise ValueError("Murder must be targeted")
 
         self.actor.coins -= 3
         target.lose_life()
 
-        return True
+        return Result.SUCCESS
 
 
 class Diplomacy(Action):
     name = "Diplomacy"
     description = "{actor} performed diplomacy"
 
-    def do(self, target=None, game=None):
+    def perform(self, target=None, game=None):
         if target is not None:
             raise ValueError("Diplomacy should not be targeted")
 
@@ -184,7 +192,7 @@ class Diplomacy(Action):
         self.actor.return_card()
         self.actor.return_card()
 
-        return True
+        return Result.SUCCESS
 
 
 class CounterDonations(Action):
@@ -201,38 +209,41 @@ class CounterMurder(Action):
 
 
 """ DECORATORS """
-class ActionOption(Action):
+class ActionModifier(Action):
     def __init__(self, action):
         super().__init__(action.actor)
         self.name = action.name
         self.action = action
 
-    def do(self, target=None, game=None):
+    def perform(self, target=None, game=None):
         raise NotImplementedError()
 
 
-class Targeted(ActionOption):
-    def do(self, target=None, game=None):
+class Targeted(ActionModifier):
+    def perform(self, target=None, game=None):
         target = self.actor.choose_target()
-        return self.action.do(target, game)
+        return self.action.perform(target, game)
 
 
-class Counterable(ActionOption):
+class Counterable(ActionModifier):
     description = "Check if {actor} is countered"
 
-    def do(self, target=None, game=None):
+    def perform(self, target=None, game=None):
+        if game is None:
+            raise ValueError("Counterable actions require a game reference")
+
         opponent = game.ask_for_counters(self)
         if opponent is None:
             # No counter > perform action
-            return self.action.do(target, game)
+            return self.action.perform(target, game)
         else:
             counter_action = self.get_counter_action(opponent)
-            if counter_action.do(target, game):
+            if counter_action.perform(target, game):
                 # Counter, not questioned
-                return False
+                return Result.FAILURE
             else:
                 # Counter, successfully questioned > perform action
-                return self.action.do(target, game)
+                return self.action.perform(target, game)
     
     def get_counter_action(self, opponent):
         af = ActionFactory()
@@ -249,7 +260,7 @@ class Counterable(ActionOption):
         return counter_action
 
 
-class Questionable(ActionOption):
+class Questionable(ActionModifier):
     description = "Check if {actor} is challenged"
 
     action_enablers = {
@@ -262,18 +273,21 @@ class Questionable(ActionOption):
         "Counter Murder": ["Medic"]
     }
 
-    def do(self, target=None, game=None):
+    def perform(self, target=None, game=None):
+        if game is None:
+            raise ValueError("Questionable actions require a game reference")
+
         opponent = game.ask_for_challenges(self)
 
         if opponent is None:
             # No challenge > perform action
-            return self.action.do(target, game)
-        elif game.resolve_challenge(opponent, self):
+            return self.action.perform(target, game)
+        elif game.resolve_challenge(opponent, self) == Result.CHALLENGE_SUCCESS:
             # Challenged successfully (actor did not reveal correct card)
-            return False
+            return Result.FAILURE
         else:
             # Challenge failed (actor did reveal correct card) > perform action
-            return self.action.do(target)
+            return self.action.perform(target)
 
     def is_performed_by(self, card):
         if self.name not in Questionable.action_enablers:

@@ -1,5 +1,5 @@
 import random
-from actions import ActionList as Actions
+from actions import Actions
 from enum import Enum, auto
 
 class Card(Enum):
