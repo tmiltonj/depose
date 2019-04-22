@@ -1,6 +1,6 @@
-from model import Deck, Card, Player
-from game import Game, StartTurnState
-from view import GUI
+from depose.model import Deck, Card, Player
+from depose.game import Game, StartTurnState
+from depose.view import GUI
 
 def main():
     deck = create_deck()

@@ -5,16 +5,31 @@ A GUI version of the board game Coup, made with Python 3.6 and Tkinter.
 ## Dependencies
 
 * tkinter
-* pytest (for unit tests)
+* pytest
+
+```bash
+apt install python3-tk
+pip install pytest
+```
 
 ## Running
 
+From project root:
+
 ```bash
-python depose/depose.py
+python -m depose.main
 ```
 
 ## Testing
 
+From project root:
+
 ```bash
-pytest tests/
+python -m pytest
+```
+From `tests/`
+
+```bash
+cd tests/
+pytest
 ```

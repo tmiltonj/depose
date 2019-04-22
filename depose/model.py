@@ -1,5 +1,5 @@
 import random
-from actions import Actions
+from depose.actions import Actions
 from enum import Enum, auto
 
 class Card(Enum):

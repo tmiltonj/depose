@@ -1,6 +1,6 @@
 from threading import Thread
 from time import sleep
-from view import IdleState, OptionListState
+from depose.view import IdleState, OptionListState
 
 class Game():
     def __init__(self, players, state=None, ui=None):
