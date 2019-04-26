@@ -56,12 +56,11 @@ class Player():
             self.add_card(self.deck.get())
 
     def _choose_card(self):
-        card = '' # Choose a card
-        #self.game.wait_for_input(options=self.cards)
-        if card not in self.cards:
-            raise ValueError("Cannot find {}".format(card))
-
-        return card
+        self.game.wait_for_input(
+            "Select a card to reveal",
+            self.cards,
+            self.game.receive_revealed_card
+        )
 
     def return_card(self, card=None):
         if card is None:
@@ -101,18 +100,28 @@ class Player():
 
     def choose_action(self):
         actions = self._get_valid_actions()
-        choice = "Salary"
-        choice = self.game.wait_for_input(actions.keys())
-        return self.action_factory.create(actions[choice])
+        choice = self.game.wait_for_input(
+            "Select an action",
+            actions.keys(),
+            self.game.receive_action
+        )
 
     def choose_target(self, targets):
         #target = self.game.wait_for_input(targets)
         return
 
     def ask_to_counter(self, action):
-        #choice = self.game.wait_for_input('')
+        choice = self.game.wait_for_input(
+            "Counter {}'s {}?".format(action.actor.name, action.name),
+            ["Yes", "No"],
+            self.game.receive_counter
+        )
         return
 
     def ask_to_challenge(self, action):
-        #choice = self.game.wait_for_input('')
+        choice = self.game.wait_for_input(
+            "Challenge {}'s {}?".format(action.actor.name, action.name),
+            ["Yes", "No"],
+            self.game.receive_challenge
+        )
         return

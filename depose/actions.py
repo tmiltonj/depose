@@ -22,10 +22,7 @@ class Actions(Enum):
 
 
 class ActionFactory():
-    def __init__(self, actor=None):
-        self.actor = actor
-
-    def create(self, action):
+    def create(self, action, actor):
         action_map = {
             Actions.SALARY: self.salary,
             Actions.DONATIONS: self.donations,
@@ -39,49 +36,49 @@ class ActionFactory():
             Actions.COUNTER_MURDER: self.counter_murder
         }
 
-        return action_map[action]()
+        return action_map[action](actor)
 
-    def salary(self):
-        return Salary(actor=self.actor)
+    def salary(self, actor):
+        return Salary(actor=actor)
 
-    def donations(self):
-        d = Donations(actor=self.actor)
+    def donations(self, actor):
+        d = Donations(actor=actor)
         return Counterable(d)
 
-    def tithe(self):
-        t = Tithe(actor=self.actor)
+    def tithe(self, actor):
+        t = Tithe(actor=actor)
         return Questionable(t)
 
-    def depose(self):
-        d = Depose(actor=self.actor)
+    def depose(self, actor):
+        d = Depose(actor=actor)
         return Targeted(d)
 
-    def mug(self):
-        m = Mug(actor=self.actor)
+    def mug(self, actor):
+        m = Mug(actor=actor)
         m = Counterable(m)
         m = Questionable(m)
         return Targeted(m)
 
-    def murder(self):
-        m = Murder(actor=self.actor)
+    def murder(self, actor):
+        m = Murder(actor=actor)
         m = Counterable(m)
         m = Questionable(m)
         return Targeted(m)
 
-    def diplomacy(self):
-        dip = Diplomacy(actor=self.actor)
+    def diplomacy(self, actor):
+        dip = Diplomacy(actor=actor)
         return Questionable(dip)
 
-    def counter_donations(self):
-        cd = CounterDonations(actor=self.actor)
+    def counter_donations(self, actor):
+        cd = CounterDonations(actor=actor)
         return Questionable(cd)
 
-    def counter_mug(self):
-        cm = CounterMug(actor=self.actor)
+    def counter_mug(self, actor):
+        cm = CounterMug(actor=actor)
         return Questionable(cm)
 
-    def counter_murder(self):
-        cm = CounterMurder(actor=self.actor)
+    def counter_murder(self, actor):
+        cm = CounterMurder(actor=actor)
         return Questionable(cm)
 
 
@@ -94,7 +91,7 @@ class Action():
         self.actor = actor
 
     def perform(self, target=None, game=None):
-        return Result.SUCCESS
+        game.action_completed(self)
 
 
 class Salary(Action):
@@ -106,8 +103,7 @@ class Salary(Action):
             raise ValueError("Salary should not be targeted")
 
         self.actor.coins += 1
-
-        return Result.SUCCESS
+        super().perform(target, game)
 
 
 class Donations(Action):
@@ -119,8 +115,7 @@ class Donations(Action):
             raise ValueError("Donations should not be targeted")
 
         self.actor.coins += 2
-
-        return Result.SUCCESS
+        super().perform(target, game)
 
 
 class Tithe(Action):
@@ -132,8 +127,7 @@ class Tithe(Action):
             raise ValueError("Tithe should not be targeted")
 
         self.actor.coins += 3
-
-        return Result.SUCCESS
+        super().perform(target, game)
 
 
 class Depose(Action):
@@ -146,8 +140,7 @@ class Depose(Action):
 
         self.actor.coins -= 7
         target.lose_life()
-
-        return Result.SUCCESS
+        super().perform(target, game)
 
 
 class Mug(Action):
@@ -163,7 +156,7 @@ class Mug(Action):
         target.coins -= theft_amount
         self.description = "{actor} mugged {target} for " + str(theft_amount) + " coins"
 
-        return Result.SUCCESS
+        super().perform(target, game)
 
 
 class Murder(Action):
@@ -176,8 +169,7 @@ class Murder(Action):
 
         self.actor.coins -= 3
         target.lose_life()
-
-        return Result.SUCCESS
+        super().perform(target, game)
 
 
 class Diplomacy(Action):
@@ -191,8 +183,7 @@ class Diplomacy(Action):
         self.actor.draw_cards(2)
         self.actor.return_card()
         self.actor.return_card()
-
-        return Result.SUCCESS
+        super().perform(target, game)
 
 
 class CounterDonations(Action):
@@ -232,31 +223,35 @@ class Counterable(ActionModifier):
         if game is None:
             raise ValueError("Counterable actions require a game reference")
 
-        opponent = game.ask_for_counters(self)
+        game.ask_for_counters(self)
+
+    def _perform(self, game, opponent, target=None):
         if opponent is None:
             # No counter > perform action
-            return self.action.perform(target, game)
+            self.action.perform(target, game)
         else:
+            print("Action was countered")
             counter_action = self.get_counter_action(opponent)
-            if counter_action.perform(target, game) == Result.SUCCESS:
+            counter_action.perform(target, game)
+            """
                 # Counter, not questioned
                 return Result.FAILURE
             else:
                 # Counter, successfully questioned > perform action
                 return self.action.perform(target, game)
+            """
     
     def get_counter_action(self, opponent):
         af = ActionFactory()
         if self.name == "Donations":
-            counter_action = af.counter_donations()
+            counter_action = af.counter_donations(opponent)
         elif self.name == "Mug":
-            counter_action = af.counter_mug()
+            counter_action = af.counter_mug(opponent)
         elif self.name == "Murder":
-            counter_action = af.counter_murder()
+            counter_action = af.counter_murder(opponent)
         else:
             raise ValueError("No blocking action exists")
 
-        counter_action.actor = opponent
         return counter_action
 
 
@@ -279,15 +274,15 @@ class Questionable(ActionModifier):
 
         opponent = game.ask_for_challenges(self)
 
+    def _perform(self, game, opponent, target=None):
         if opponent is None:
             # No challenge > perform action
             return self.action.perform(target, game)
-        elif game.resolve_challenge(opponent, self) == Result.CHALLENGE_SUCCESS:
-            # Challenged successfully (actor did not reveal correct card)
-            return Result.FAILURE
         else:
-            # Challenge failed (actor did reveal correct card) > perform action
-            return self.action.perform(target)
+            game.resolve_challenge(self)
+
+    def challenge_succeeded(self, game):
+        self.action.perform(game=game)
 
     def is_performed_by(self, card):
         if self.name not in Questionable.action_enablers:

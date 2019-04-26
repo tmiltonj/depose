@@ -34,26 +34,26 @@ def target(deck):
 
 @pytest.fixture
 def action_factory(player):
-    af = ActionFactory(actor=player)
+    af = ActionFactory()
     return af
 
-def test_actionfactory(action_factory):
+def test_actionfactory(action_factory, player):
     for action in Actions:
-        action_factory.create(action)
+        action_factory.create(action, player)
 
-    a = action_factory.create(Actions.SALARY)
+    a = action_factory.create(Actions.SALARY, player)
     assert a.name == Salary.name
-    a = action_factory.create(Actions.DONATIONS)
+    a = action_factory.create(Actions.DONATIONS, player)
     assert a.name == Donations.name
-    a = action_factory.create(Actions.TITHE)
+    a = action_factory.create(Actions.TITHE, player)
     assert a.name == Tithe.name
-    a = action_factory.create(Actions.DEPOSE)
+    a = action_factory.create(Actions.DEPOSE, player)
     assert a.name == Depose.name
-    a = action_factory.create(Actions.MUG)
+    a = action_factory.create(Actions.MUG, player)
     assert a.name == Mug.name
-    a = action_factory.create(Actions.MURDER)
+    a = action_factory.create(Actions.MURDER, player)
     assert a.name == Murder.name
-    a = action_factory.create(Actions.DIPLOMACY)
+    a = action_factory.create(Actions.DIPLOMACY, player)
     assert a.name == Diplomacy.name
 
 

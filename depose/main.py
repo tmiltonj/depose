@@ -1,19 +1,27 @@
 from depose.model import Deck, Card, Player
-from depose.game import Game, StartTurnState
-from depose.view import GUI
+from depose.actions import ActionFactory
+from depose.game import Game
+from depose.view import GUI, IdleState
 
 def main():
+    af = ActionFactory()
     deck = create_deck()
     players = create_players(num_players=4, deck=deck)
+    
+    ui = GUI(players=players)
+    ui.set_state(
+        IdleState(context=ui, message="Waiting...")
+    )
 
-    gui = GUI(players=players)
-    game = Game(players=players, state=StartTurnState(), ui=gui)
+    g = Game(ui=ui, action_factory=af)
+    for p in players:
+        g.add_player(p)
 
-    gui.add_observer(game)
-    game.update()
+    g.setup_game()
+    g.play()
 
-    gui.mainloop()
-    gui.destroy()
+    ui.mainloop()
+    ui.destroy()
 
 def create_deck(num_sets=3):
     deck = Deck()
@@ -26,14 +34,14 @@ def create_deck(num_sets=3):
 
     return deck
 
-def create_players(num_players, game=None, deck=None, ui=None):
+def create_players(num_players, game=None, deck=None):
     import random
     names = ["Shinji", "Rei", "Asuka", "Misato", "Gendo", "Kaworu"]
     random.shuffle(names)
 
     players = []
     for i in range(num_players):
-        p = Player(names[i])
+        p = Player(names[i], deck=deck)
         players.append(p)
     return players
 
