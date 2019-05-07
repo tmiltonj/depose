@@ -1,193 +1,151 @@
-from threading import Thread
-from time import sleep
-from depose.view import GUI, IdleState, OptionListState
-from collections import deque
-from depose.model import Player, Deck, Card
-from depose.actions import ActionFactory, Actions
+from functools import partial
+
+from depose.model import Card, Deck
+from depose.player import Player
+from depose.actions import (
+    Action, ActionFactory, ChallengableAction, CounterableAction, TargetedAction
+)
+from depose.main import create_deck
+
+def main():
+    g = Game()
+    g.play()
+
+
+class FakeGUI():
+    def set_state(self, state):
+        prompt = state.prompt
+        options = state.options
+        print(">>", prompt)
+        for ind, opt in enumerate(options, 1):
+            print(">>", ind, opt)
+
+        ind = -1
+        while ind <= 0 or ind > len(options):
+            try:
+                ind = int(input(">> Enter choice: "))
+            except ValueError:
+                ind = -1
+
+        state.context.handle(options[ind - 1])
+
 
 class Game():
-    def __init__(self, ui, action_factory):
-        self.ui = ui
-        self.ui.add_observer(self)
+    def __init__(self):
+        gui = FakeGUI()
+        af = ActionFactory()
+        deck = create_deck()
 
-        self.action_factory = action_factory
+        self.players = [
+            Player("A", deck, af, gui),
+            Player("B", deck, af, gui),
+            Player("C", deck, af, gui),
+            Player("D", deck, af, gui)
+        ]
 
-        self.players = []
-        self.active_player = None
-        self.turn_count = 1
-
-    def add_player(self, player):
-        self.players.append(player)
-        # Player needs a reference to Game for user input
-        player.game = self
-
-    def wait_for_input(self, prompt, options, response):
-        self.handle = response
-        self.ui.set_state(
-            OptionListState(
-                context=self.ui,
-                prompt=prompt,
-                options=options
-            )
-        )
-
-    def receive_action(self, action):
-        print("Player chose action: ", action)
-        action_map = { 
-            "Salary": Actions.SALARY, 
-            "Donations": Actions.DONATIONS, 
-            "Tithe": Actions.TITHE,
-            "Depose": Actions.DEPOSE,
-            "Mug": Actions.MUG,
-            "Murder": Actions.MURDER,
-            "Diplomacy": Actions.DIPLOMACY,
-        }
-
-        action = self.action_factory.create(
-            action_map[action], self.active_player
-        )
-        action.perform(game=self)
-        print(action.description.format(actor=action.actor))
-
-        #self._cleanup()
-
-    def ask_for_counters(self, action):
-        self.curr_action = action
-        self.curr_ask = 0
-        while self.players[self.curr_ask] == action.actor:
-            self.curr_ask += 1
-            if self.curr_ask >= len(self.players):
-                break
-
-        if self.curr_ask >= len(self.players):
-            action._perform(self, opponent=None)
-        else:
-            self.players[self.curr_ask].ask_to_counter(action)
-
-    def receive_counter(self, result):
-        if result == "Yes":
-            print("Received a 'YES' to counter")
-            print("Currently asking ", self.players[self.curr_ask])
-            self.curr_action._perform(self, opponent=self.players[self.curr_ask])
-        else:
-            self.curr_ask += 1
-            if self.curr_ask < len(self.players):
-                while self.players[self.curr_ask] == self.curr_action.actor:
-                    self.curr_ask += 1
-                    if self.curr_ask >= len(self.players):
-                        break
-
-            if self.curr_ask >= len(self.players):
-                self.curr_action._perform(self, opponent=None)
-            else:
-                self.players[self.curr_ask].ask_to_counter(self.curr_action)
-
-    def ask_for_challenges(self, action):
-        self.curr_action = action
-        self.curr_ask = 0
-        while self.players[self.curr_ask] == action.actor:
-            self.curr_ask += 1
-            if self.curr_ask >= len(self.players):
-                break
-
-        if self.curr_ask >= len(self.players):
-            action._perform(self, opponent=None)
-        else:
-            self.players[self.curr_ask].ask_to_challenge(action)
-
-    def receive_challenge(self, result):
-        if result == "Yes":
-            self.curr_action._perform(self, self.players[self.curr_ask])
-        else:
-            self.curr_ask += 1
-            if self.curr_ask < len(self.players):
-                while self.players[self.curr_ask] == self.curr_action.actor:
-                    self.curr_ask += 1
-                    if self.curr_ask >= len(self.players):
-                        break
-
-            if self.curr_ask >= len(self.players):
-                self.curr_action._perform(self, opponent=None)
-            else:
-                self.players[self.curr_ask].ask_to_counter(self.curr_action)
-    
-    def resolve_challenge(self, action):
-        self.curr_action = action
-        action.actor.resolve_challenge(action)
-
-    def receive_revealed_card(self, card):
-        action = self.curr_action
-        if not action.is_performed_by(card):
-            print("Challenge succeeded, could not perform action")
-            self._cleanup()
-        else:
-            print("Challenge failed, can perform action")
-            action.challenge_succeeded(game=self)
-    
-    def action_completed(self, action):
-        print(action.description)
-        self._cleanup()
-
-    def _cleanup(self):
-        dead = [p for p in self.players if len(p.cards) == 0]
-        for dead_player in dead:
-            print(dead_player.name, " has no cards left, removed from queue")
-            self.players.remove(dead_player)
-
-        if len(self.players) > 1:
-            self._advance_turn()
-        else:
-            self._game_over()
-
-    def _advance_turn(self):
-        ap_ind = self.players.index(self.active_player)
-        ap_ind = (ap_ind + 1) % len(self.players)
-        self.active_player = self.players[ap_ind]
-
-        self.take_turn(self.active_player)
-
-    def _game_over(self):
-        print("Game over! ", self.players[0], " is the winner!")
-
-    def setup_game(self):
         for p in self.players:
-            p.coins = 2
+            p.player_list = self.players
             p.draw_cards(2)
+            p.add_action_observer(self)
 
-    def take_turn(self, player):
-        print("Select action for ", player.name)
-        player.choose_action()
+        self.obs = []
+
+        self.active_player = -1
 
     def play(self):
-        self.active_player = self.players[0]
-        self.take_turn(self.active_player)
+        self.active_player += 1
+        if (self.active_player >= len(self.players)):
+            self.active_player = 0
+
+        print(self.players[self.active_player].name, "takes their turn...")
+        self.players[self.active_player].choose_action()
+
+    def receive_action(self, action):
+        """ Perform & listen for the outcome of the action """
+        action.add_observer(self)
+        action.add_decorator_observer(self)
+        action.perform()
+
+    def action_success(self, action):
+        print(action.name, "succeeded!\n")
+        self.play()
+
+    def action_failed(self, action):
+        print(action.name, "failed :(\n")
+        self.play()
+
+    def add_observer(self, obs):
+        self.obs.append(obs)
+
+    def remove_observer(self, obs):
+        if obs in self.obs:
+            self.obs.remove(obs)
+
+    def ask_for_challenges(self, action):
+        """ Prepare the list of challenge queries to ask players """
+        self.questions = iter(
+            [partial(Player.ask_to_challenge, p, action) 
+                for p in self.players if p is not action.actor]
+        )
+        self.receive_decline()
+
+    def ask_for_counters(self, action):
+        """ Prepare the list of counter queries to ask players """
+        if action.target is not None:
+            # Only the target can block targeted actions
+            action.target.ask_to_counter(action)
+        else:
+            self.questions = iter(
+                [partial(Player.ask_to_counter, p, action) 
+                    for p in self.players if p is not action.actor]
+            )
+            self.receive_decline()
+
+    def receive_decline(self, source=None):
+        """ Ask the next player in the challenge / counter query list
+
+            This will notify observers if the end of the list has been reached
+            source -- the Player who sent the event """
+        try:
+            next(self.questions)()
+        except StopIteration:
+            print("GAME: No more players to ask")
+            for o in self.obs:
+                o.notify_decline()
+
+    def receive_accept(self, source):
+        """ Notify observers if the challenge / counter was accepted """
+        for o in self.obs:
+            o.notify_accept(source)
+
+    def resolve_challenge(self, action, challenger):
+        """ Prompt action's actor to reveal a card """
+        self.challenger = challenger
+        self.action = action
+        action.actor.resolve_challenge(action)
+
+    def receive_challenge_card(self, actor, card):
+        """ Resolve challenge with chosen card, notifying observers of the result """
+        if self.can_perform(card, self.action):
+            print(self.challenger.name, "was wrong and lost a life!")
+            for o in self.obs:
+                o.challenge_failed()
+        else:
+            print(actor.name, "cannot perform", self.action.name, "and loses a life!")
+            for o in self.obs:
+                o.challenge_success()
+
+    def can_perform(self, card, action):
+        """ Test if card can perform a given action """
+        #TODO: Implement properly
+        if card == Card.LORD:
+            return action.name in ["tithe", "block donations"]
+        elif card == Card.MERCENARY:
+            return action.name in ["mug", "block mug"]
+        else:
+            return False
+
 
 
 if __name__ == '__main__':
-    af = ActionFactory()
-
-    d = Deck()
-    d.cards = [Card.BANDIT, Card.DIPLOMAT, Card.LORD, Card.MEDIC]
-
-    p1 = Player("Ritz", deck=d)
-    p2 = Player("Sharna", deck=d)
-    
-    ui = GUI(players=[p1, p2])
-    ui.set_state(
-        IdleState(context=ui, message="Waiting...")
-    )
-
-    g = Game(ui=ui, action_factory=af)
-    g.add_player(p1)
-    g.add_player(p2)
-
-    #t = Thread(target=g.play)
-    #t.start()
-    g.setup_game()
-    g.play()
-
-    ui.mainloop()
-    ui.destroy()
-
-
-
+    main()
