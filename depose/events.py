@@ -1,6 +1,7 @@
 from functools import partial
 
 from depose.model import Card
+from depose.actions import Action, ChallengableAction, CounterableAction, TargetedAction
 
 def main():
     g = Game()
@@ -117,162 +118,6 @@ class Game():
             return False
 
 
-class Action():
-    def __init__(self, actor, name):
-        self.actor = actor
-        self.name = name
-        self.obs = []
-        self.dec_obs = []
-
-    def add_observer(self, obs):
-        print("adding", getattr(obs, "name", "Game"), "as an obs to", self.name)
-        self.obs.append(obs)
-
-    def add_decorator_observer(self, obs):
-        print("adding", getattr(obs, "name", "Game"), "as a dec_obs to", self.name)
-        self.dec_obs.append(obs)
-
-    def get_observers(self):
-        return self.obs
-
-    def get_decorator_observers(self):
-        return self.dec_obs
-
-    def perform(self, target=None):
-        print("Performing action...")
-        self.notify_success()
-
-    def notify_success(self):
-        for o in self.get_observers():
-            o.action_success(self)
-        
-    def notify_failure(self):
-        for o in self.get_observers():
-            o.action_failed(self)
-
-#TODO: concrete implementations in actions.py
-
-class ActionDecorator(Action):
-    """ Decorate Actions to allow targetting, countering and challenging """
-    def __init__(self, base_action):
-        super().__init__(base_action.actor, base_action.name)
-        self.base_action = base_action
-
-    def add_observer(self, obs):
-        self.base_action.add_observer(obs)
-
-    def add_decorator_observer(self, obs):
-        self.base_action.add_decorator_observer(obs)
-
-    def get_observers(self):
-        return self.base_action.get_observers()
-
-    def get_decorator_observers(self):
-        return self.base_action.get_decorator_observers()
-
-    def stop_listening(self):
-        """ Stop listening for future counter / challenge responses """
-        for o in self.get_decorator_observers():
-            o.remove_observer(self)
-
-
-class TargetAction(ActionDecorator):
-    """ Ensures base_action has a target before it's performed """
-    def perform(self, target=None):
-        if target is None:
-            self.actor.add_target_observer(self)
-            self.actor.choose_target()
-        else:
-            self.receive_target(target)
-
-    def receive_target(self, target):
-        print("TargetAction: targetting", target)
-        self.base_action.perform(target)
-
-
-class ChallengeAction(ActionDecorator):
-    """ Allows all other players to challenge an action before it's performed """
-    def perform(self, target=None):
-        self.target = target
-        for o in self.get_decorator_observers():
-            print("ChallengeAction: Adding", getattr(o, "name", "Game"), "as an obs")
-            o.add_observer(self) # Listen for the result of the following query
-            o.ask_for_challenges(self)
-
-    def notify_accept(self, challenger):
-        """ Challenger accepts """
-        print(self.name, "was challenged by", challenger.name)
-        for o in self.get_decorator_observers():
-            o.resolve_challenge(self, challenger)
-        
-    def notify_decline(self):
-        """ No challenge found, we perform the action """
-        print(self.name, "was not challenged")
-        self.challenge_failed()
-
-    def challenge_success(self):
-        """ Challenge succeeded (we revealed the wrong card) """
-        print(self.actor.name, "could not complete", self.name)
-        self.stop_listening()
-        self.notify_failure()
-
-    def challenge_failed(self):
-        """ Challenge failed, we can perform the action """
-        print("{} can {}!".format(self.actor.name, self.name))
-        self.stop_listening()
-        self.base_action.perform(target=self.target)
-
-
-class CounterableAction(ActionDecorator):
-    """ Allows other players to counter an action before it's performed """
-    def perform(self, target=None):
-        self.target = target
-        for o in self.get_decorator_observers():
-            print("CounterableAction: Adding", getattr(o, 'name', 'Game'), "as an obs")
-            o.add_observer(self) # Listen to the result of the following query
-            o.ask_for_counters(self)
-
-    def get_counter_action(self, actor):
-        """ Return matching counter-action """
-        if self.name == "donations":
-            name = "block donations"
-        elif self.name == "mug":
-            name = "block mug"
-        elif self.name == "murder":
-            name = "block murder"
-        else:
-            raise ValueError("Action has no counter")
-
-        a = Action(name=name, actor=actor)
-        return ChallengeAction(base_action=a)
-
-    def notify_accept(self, opponent):
-        """ Counter accepted. Create, perform and listen to the counter-action """
-        print(self.name, "was countered by", opponent.name)
-        counter = self.get_counter_action(actor=opponent)
-        counter.add_observer(self)
-        # The counter-action needs to ask for challenges
-        for o in self.get_decorator_observers():
-            counter.add_decorator_observer(o) 
-        self.stop_listening() # we don't want to hear the response though
-        counter.perform()
-    
-    def notify_decline(self):
-        """ Nobody chose to counter, so we perform our base_action """
-        print(self.name, "was not countered")
-        self.action_failed(None)
-
-    def action_success(self, action):
-        """ Counter succeeded (which stops this action) """
-        print(self.name, "was countered")
-        self.stop_listening()
-        self.notify_failure()
-
-    def action_failed(self, action):
-        """ Counter failed, we can perform this action """
-        print(self.name, "could not be countered")
-        self.stop_listening()
-        self.base_action.perform(target=self.target)
 
 
 class Player():
@@ -290,10 +135,10 @@ class Player():
 
     def choose_action(self):
         action_name = input("Type an action: ")
-        a = Action(actor=self, name=action_name)
+        a = Action(actor=self)
         b = CounterableAction(base_action=a)
-        c = ChallengeAction(base_action=b)
-        t = TargetAction(base_action=c)
+        c = ChallengableAction(base_action=b)
+        t = TargetedAction(base_action=c)
         for o in self.action_obs:
             o.receive_action(t)
 
