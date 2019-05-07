@@ -1,55 +1,17 @@
 from functools import partial
 
-from depose.model import Card, Deck
+from depose.model import Card
 from depose.player import Player
-from depose.actions import (
-    Action, ActionFactory, ChallengableAction, CounterableAction, TargetedAction
-)
-from depose.main import create_deck
-
-def main():
-    g = Game()
-    g.play()
-
-
-class FakeGUI():
-    def set_state(self, state):
-        prompt = state.prompt
-        options = state.options
-        print(">>", prompt)
-        for ind, opt in enumerate(options, 1):
-            print(">>", ind, opt)
-
-        ind = -1
-        while ind <= 0 or ind > len(options):
-            try:
-                ind = int(input(">> Enter choice: "))
-            except ValueError:
-                ind = -1
-
-        state.context.handle(options[ind - 1])
 
 
 class Game():
-    def __init__(self):
-        gui = FakeGUI()
-        af = ActionFactory()
-        deck = create_deck()
-
-        self.players = [
-            Player("A", deck, af, gui),
-            Player("B", deck, af, gui),
-            Player("C", deck, af, gui),
-            Player("D", deck, af, gui)
-        ]
-
+    def __init__(self, players, ui):
+        self.players = players 
         for p in self.players:
-            p.player_list = self.players
-            p.draw_cards(2)
             p.add_action_observer(self)
 
+        self.gui = ui
         self.obs = []
-
         self.active_player = -1
 
     def play(self):
@@ -144,8 +106,3 @@ class Game():
             return action.name in ["mug", "block mug"]
         else:
             return False
-
-
-
-if __name__ == '__main__':
-    main()
