@@ -177,14 +177,30 @@ class Diplomacy(Action):
     name = "Diplomacy"
     description = "{actor} performed diplomacy"
 
+    def __init__(self, actor):
+        super().__init__(actor)
+        self.returned_count = 0
+
     def perform(self, target=None):
+        self.target = target
         if target is not None:
             raise ValueError("Diplomacy should not be targeted")
 
+        self.actor.add_state_observer(self)
         self.actor.draw_cards(2)
         self.actor.return_card()
-        self.actor.return_card()
-        super().perform(target)
+
+    def notify_return_card(self, actor, card):
+        if actor is not self.actor:
+            raise ValueError("Unexpected actor:", actor)
+
+        self.returned_count += 1
+        print(actor.name, "returned", card.name)
+        if self.returned_count < 2:
+            self.actor.return_card()
+        else:
+            self.actor.remove_state_observer(self)
+            super().perform(self.target)
 
 
 class CounterDonations(Action):

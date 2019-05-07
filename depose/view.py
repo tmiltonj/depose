@@ -1,5 +1,8 @@
 from tkinter import *
 from functools import partial
+from collections import namedtuple
+
+Option = namedtuple('Option', ['label', 'value'])
 
 def rgb(r, g, b):
     """ Convert rgb -> hex string """
@@ -71,7 +74,14 @@ class GUI():
         self.text.config(state=DISABLED)
 
     def add_observer(self, obs):
-        self.obs.append(obs)
+        print("GUI: Adding", getattr(obs, "name", obs.__class__), "as an obs")
+        if obs not in self.obs:
+            self.obs.append(obs)
+
+    def remove_observer(self, obs):
+        print("GUI: Removing", getattr(obs, "name", obs.__class__), "as an obs")
+        if obs in self.obs:
+            self.obs.remove(obs)
 
     def notify(self, event):
         for o in self.obs:
@@ -108,8 +118,8 @@ class OptionListState(GUIState):
         for col, option in enumerate(self.options):
             b = Button(
                 frame, 
-                text=option,
-                command=partial(self.context.notify, option), # partial() allows us to pass an argument to the callback
+                text=option.label,
+                command=partial(self.context.notify, option.value), # partial() allows us to pass an argument to the callback
                 width=int(40 / NUM_COLS)
             )
             buttons.append(b)
