@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import Mock
 
-from depose.model import Card, Deck, Player
+from depose.model import Card, Deck
+from depose.player import Player
 from depose.actions import ActionFactory
 
 def test_deck():

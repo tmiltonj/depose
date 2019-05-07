@@ -1,11 +1,12 @@
 import pytest
 from unittest.mock import Mock
 
-from depose.model import Player, Deck, Card
+from depose.model import Deck, Card
+from depose.player import Player
 from depose.actions import (
-    Result, Actions, ActionFactory, 
+    ActionFactory, 
     Salary, Donations, Tithe, Depose, Mug, Murder, Diplomacy,
-    Targeted, Counterable, Questionable,
+    TargetedAction, CounterableAction, ChallengableAction,
 )
 
 @pytest.fixture
@@ -138,7 +139,7 @@ def game():
 
 def test_targeted(action, player, target):
     player.choose_target = Mock(return_value=target)
-    a = Targeted(action)
+    a = TargetedAction(action)
     a.perform()
 
     player.choose_target.assert_called_once()
@@ -146,7 +147,7 @@ def test_targeted(action, player, target):
     assert 4 == player.coins
 
 def test_counterable(player, action, target, game):
-    a = Counterable(action)
+    a = CounterableAction(action)
     mock_counter = Mock()
     a.get_counter_action = Mock(return_value=mock_counter)
 
@@ -168,7 +169,7 @@ def test_counterable(player, action, target, game):
 def test_questionable(player, action, target, game):
     player.lose_life = Mock()
     target.lose_life = Mock()
-    a = Questionable(action)
+    a = ChallengableAction(action)
 
     game.ask_for_challenges.return_value = None
     assert Result.SUCCESS == a.perform(target=target, game=game)
