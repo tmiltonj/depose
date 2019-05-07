@@ -1,23 +1,51 @@
 from functools import partial
 
-from depose.model import Card
-from depose.actions import Action, ChallengableAction, CounterableAction, TargetedAction
+from depose.model import Card, Deck
+from depose.player import Player
+from depose.actions import (
+    Action, ActionFactory, ChallengableAction, CounterableAction, TargetedAction
+)
+from depose.main import create_deck
 
 def main():
     g = Game()
     g.play()
 
 
+class FakeGUI():
+    def set_state(self, state):
+        prompt = state.prompt
+        options = state.options
+        print(">>", prompt)
+        for ind, opt in enumerate(options, 1):
+            print(">>", ind, opt)
+
+        ind = -1
+        while ind <= 0 or ind > len(options):
+            try:
+                ind = int(input(">> Enter choice: "))
+            except ValueError:
+                ind = -1
+
+        state.context.handle(options[ind - 1])
+
+
 class Game():
     def __init__(self):
+        gui = FakeGUI()
+        af = ActionFactory()
+        deck = create_deck()
+
         self.players = [
-            Player("A"),
-            Player("B"),
-            Player("C"),
-            Player("D")
+            Player("A", deck, af, gui),
+            Player("B", deck, af, gui),
+            Player("C", deck, af, gui),
+            Player("D", deck, af, gui)
         ]
 
         for p in self.players:
+            p.player_list = self.players
+            p.draw_cards(2)
             p.add_action_observer(self)
 
         self.obs = []
@@ -116,71 +144,6 @@ class Game():
             return action.name in ["mug", "block mug"]
         else:
             return False
-
-
-
-
-class Player():
-    # TODO: Hook input methods into GUI
-    def __init__(self, name):
-        self.name = name
-        self.action_obs = []
-        self.target_obs = []
-
-    def add_action_observer(self, obs):
-        self.action_obs.append(obs)
-
-    def add_target_observer(self, obs):
-        self.target_obs.append(obs)
-
-    def choose_action(self):
-        action_name = input("Type an action: ")
-        a = Action(actor=self)
-        b = CounterableAction(base_action=a)
-        c = ChallengableAction(base_action=b)
-        t = TargetedAction(base_action=c)
-        for o in self.action_obs:
-            o.receive_action(t)
-
-    def choose_target(self):
-        target_name = input("Choose a target: ")
-        for o in self.target_obs:
-            o.receive_target(self)
-
-    def ask_to_challenge(self, action):
-        choice = input("{}, do you wish to challenge {}'s {}? ".format(
-            self.name, action.actor.name, action.name
-        ))
-        if len(choice) > 0 and choice.upper()[0] == "Y":
-            for o in self.action_obs:
-                o.receive_accept(self)
-        else:
-            for o in self.action_obs:
-                o.receive_decline(self)
-
-    def ask_to_counter(self, action):
-        choice = input("{}, do you wish to counter {}'s {}? ".format(
-            self.name, action.actor.name, action.name
-        ))
-        if len(choice) > 0 and choice.upper()[0] == "Y":
-            for o in self.action_obs:
-                o.receive_accept(self)
-        else:
-            for o in self.action_obs:
-                o.receive_decline(self)
-
-    def resolve_challenge(self, action):
-        choices = [Card.LORD, Card.BANDIT, Card.MERCENARY]
-        print(choices)
-        ind = -1
-        while ind < 0 or ind >= len(choices):
-            try:
-                ind = int(input("Pick a card: "))
-            except ValueError:
-                ind = -1
-
-        for o in self.action_obs:
-            o.receive_challenge_card(self, choices[ind])
 
 
 

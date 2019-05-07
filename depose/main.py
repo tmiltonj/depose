@@ -1,6 +1,7 @@
-from depose.model import Deck, Card, Player
+from depose.model import Deck, Card
+from depose.player import Player
 from depose.actions import ActionFactory
-from depose.game import Game
+#from depose.game import Game
 from depose.view import GUI, IdleState
 
 def main():
