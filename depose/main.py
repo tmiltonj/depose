@@ -2,7 +2,7 @@ from depose.model import Deck, Card
 from depose.player import Player
 from depose.actions import ActionFactory
 from depose.game import Game
-#from depose.view import GUI, IdleState
+from depose.view import GUI, IdleState
 
 class FakeGUI():
     def set_state(self, state):
@@ -23,7 +23,8 @@ class FakeGUI():
 
 
 def main():
-    fake_gui = FakeGUI()
+    #fake_gui = FakeGUI()
+    ui = GUI()
     af = ActionFactory()
     deck = create_deck()
 
@@ -31,27 +32,23 @@ def main():
         num_players=4, 
         deck=deck,
         action_factory=af,
-        ui=fake_gui
+        ui=ui
     )
 
     for p in players:
         p.player_list = players
         p.draw_cards(2)
     
-    """
-    ui = GUI(players=players)
+    ui.attach_player_panel(players)
     ui.set_state(
         IdleState(context=ui, message="Waiting...")
     )
-    """
-
-    g = Game(players=players, ui=fake_gui)
+    
+    g = Game(players=players, ui=ui)
     g.play()
 
-    """
     ui.mainloop()
     ui.destroy()
-    """
 
 def create_deck(num_sets=3):
     deck = Deck()

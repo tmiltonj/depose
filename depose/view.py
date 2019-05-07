@@ -7,7 +7,7 @@ def rgb(r, g, b):
 
 
 class GUI():
-    def __init__(self, players):
+    def __init__(self):
         master = Tk()
         master.grid_rowconfigure(0, weight=1)
         master.grid_columnconfigure(0, weight=1)
@@ -24,15 +24,16 @@ class GUI():
         self.text = Text(self.frame, state=DISABLED, width=50)
         self.text.grid(row=0, column=0, sticky=W+E+N+S)
 
-        self.player_panel = PlayerPanel(frame, players)
-        self.player_panel.frame.grid(row=0, column=1, sticky=W+E+N+S, ipadx=70, rowspan=2)
-
         self.dynamic_frame = None
         self.get_frame()
 
-        self.set_state(IdleState(self, ""))
+        #self.set_state(IdleState(self, ""))
 
         self.obs = []
+
+    def attach_player_panel(self, players):
+        self.player_panel = PlayerPanel(self.frame, players)
+        self.player_panel.frame.grid(row=0, column=1, sticky=W+E+N+S, ipadx=70, rowspan=2)
 
     def mainloop(self):
         self.master.mainloop()

@@ -7,6 +7,7 @@ class Player():
         self.deck = deck
         self.action_factory = action_factory
         self.ui = ui
+        ui.add_observer(self)
         
         self.action_obs = []
         self.target_obs = []
@@ -39,11 +40,14 @@ class Player():
         for _ in range(number):
             self.add_card(self.deck.get())
 
+    def handle(self, event):
+        pass
+
     def wait_for_input(self, prompt, options, callback):
         from depose.view import OptionListState
         self.handle = callback
         self.ui.set_state(
-            OptionListState(self, prompt, options)
+            OptionListState(self.ui, prompt, options)
         )
 
     def return_card(self, card=None):
