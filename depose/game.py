@@ -99,10 +99,15 @@ class Game():
 
     def can_perform(self, card, action):
         """ Test if card can perform a given action """
-        #TODO: Implement properly
         if card == Card.LORD:
-            return action.name in ["tithe", "block donations"]
+            return action.name in ["Tithe", "Counter Donations"]
+        elif card == Card.BANDIT:
+            return action.name in ["Mug", "Counter Mug"]
         elif card == Card.MERCENARY:
-            return action.name in ["mug", "block mug"]
+            return action.name in ["Murder"]
+        elif card == Card.MEDIC:
+            return action.name in ["Counter Murder"]
+        elif card == Card.DIPLOMAT:
+            return action.name in ["Diplomacy", "Counter Mug"]
         else:
             return False
