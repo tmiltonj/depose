@@ -62,6 +62,7 @@ class ActionFactory():
 class Action():
     """ Base class for Actions """
     name = "Base Action"
+    description = ""
 
     def __init__(self, actor):
         self.actor = actor
@@ -69,11 +70,11 @@ class Action():
         self.dec_obs = []
 
     def add_observer(self, obs):
-        print("adding", getattr(obs, "name", "Game"), "as an obs to", self.name)
+        print("{}: {} is now listening".format(self.name, getattr(obs, "name", "Game")))
         self.obs.append(obs)
 
     def add_decorator_observer(self, obs):
-        print("adding", getattr(obs, "name", "Game"), "as a dec_obs to", self.name)
+        print("{}: {} is now listening (decorator_obs)".format(self.name, getattr(obs, "name", "Game")))
         self.dec_obs.append(obs)
 
     def get_observers(self):
@@ -83,7 +84,7 @@ class Action():
         return self.dec_obs
 
     def perform(self, target=None):
-        print("Performing action...")
+        print("{}: {}".format(self.name, self.description))
         self.notify_success()
 
     def notify_success(self):
@@ -195,7 +196,7 @@ class Diplomacy(Action):
             raise ValueError("Unexpected actor:", actor)
 
         self.returned_count += 1
-        print(actor.name, "returned", card.name)
+        print("{}: {} returned {}".format(self.name, self.actor.name, card.name))
         if self.returned_count < 2:
             self.actor.return_card()
         else:
@@ -254,7 +255,7 @@ class TargetedAction(ActionDecorator):
             self.receive_target(target)
 
     def receive_target(self, target):
-        print("TargetAction: targetting", target)
+        print("{}: Targeting".format(self.name), target)
         self.base_action.perform(target)
 
 
@@ -263,30 +264,29 @@ class ChallengableAction(ActionDecorator):
     def perform(self, target=None):
         self.target = target
         for o in self.get_decorator_observers():
-            print("ChallengeAction: Adding", getattr(o, "name", "Game"), "as an obs")
+            print("{}: Listening to {}".format(self.name, getattr(o, "name", "Game")))
             o.add_observer(self) # Listen for the result of the following query
             o.ask_for_challenges(self)
 
     def notify_accept(self, challenger):
         """ Challenger accepts """
-        print(self.name, "was challenged by", challenger.name)
+        print("{}: Attempted challenge by {}".format(self.name, challenger.name))
         for o in self.get_decorator_observers():
             o.resolve_challenge(self, challenger)
         
     def notify_decline(self):
         """ No challenge found, we perform the action """
-        print(self.name, "was not challenged")
         self.challenge_failed()
 
     def challenge_success(self):
         """ Challenge succeeded (we revealed the wrong card) """
-        print(self.actor.name, "could not complete", self.name)
+        print("{}: Challenged successfully, cannot perform".format(self.name))
         self.stop_listening()
         self.notify_failure()
 
     def challenge_failed(self):
         """ Challenge failed, we can perform the action """
-        print("{} can {}!".format(self.actor.name, self.name))
+        print("{}: Was not challenged / challenge failed".format(self.name))
         self.stop_listening()
         self.base_action.perform(target=self.target)
 
@@ -296,7 +296,7 @@ class CounterableAction(ActionDecorator):
     def perform(self, target=None):
         self.target = target
         for o in self.get_decorator_observers():
-            print("CounterableAction: Adding", getattr(o, 'name', 'Game'), "as an obs")
+            print("{}: Listening to {}".format(self.name, getattr(o, "name", "Game")))
             o.add_observer(self) # Listen to the result of the following query
             o.ask_for_counters(self)
 
@@ -316,7 +316,7 @@ class CounterableAction(ActionDecorator):
 
     def notify_accept(self, opponent):
         """ Counter accepted. Create, perform and listen to the counter-action """
-        print(self.name, "was countered by", opponent.name)
+        print("{}: Attempted counter by {}".format(self.name, opponent.name))
         counter = self.get_counter_action(actor=opponent)
         counter.add_observer(self)
         # The counter-action needs to ask for challenges
@@ -327,17 +327,16 @@ class CounterableAction(ActionDecorator):
     
     def notify_decline(self):
         """ Nobody chose to counter, so we perform our base_action """
-        print(self.name, "was not countered")
         self.action_failed(None)
 
     def action_success(self, action):
         """ Counter succeeded (which stops this action) """
-        print(self.name, "was countered")
+        print("{}: Was countered".format(self.name))
         self.stop_listening()
         self.notify_failure()
 
     def action_failed(self, action):
         """ Counter failed, we can perform this action """
-        print(self.name, "could not be countered")
+        print("{}: Was not countered".format(self.name))
         self.stop_listening()
         self.base_action.perform(target=self.target)
