@@ -35,10 +35,14 @@ class Game():
 
     def action_success(self, action):
         self.message("{} succeeded!\n".format(action.name))
+        action.remove_observer(self)
+        action.remove_decorator_observer(self)
         self.cleanup()
 
     def action_failed(self, action):
         self.message("{} failed :(\n".format(action.name))
+        action.remove_observer(self)
+        action.remove_decorator_observer(self)
         self.cleanup()
 
     def cleanup(self):
@@ -117,11 +121,11 @@ class Game():
         self.message("{} revealed {}!".format(actor.name, card.name))
         if self.can_perform(card, self.action):
             self.message("{} was wrong and lost a life!\n".format(self.challenger.name))
-            self.challenge_result = self._challenge_failure
+            self.challenge_result = lambda: [o.challenge_failed() for o in self.obs]
             wrong_player = self.challenger
         else:
             self.message("{} cannot perform {} and loses a life!\n".format(actor.name, self.action.name))
-            self.challenge_result = self._challenge_success
+            self.challenge_result = lambda: [o.challenge_success() for o in self.obs]
             wrong_player = actor
 
         wrong_player.add_state_observer(self)
@@ -130,14 +134,6 @@ class Game():
     def notify_lose_life(self, source):
         source.remove_state_observer(self)
         self.challenge_result()
-
-    def _challenge_failure(self):
-        for o in self.obs:
-            o.challenge_failed()
-    
-    def _challenge_success(self):
-        for o in self.obs:
-            o.challenge_success()
 
     def can_perform(self, card, action):
         """ Test if card can perform a given action """

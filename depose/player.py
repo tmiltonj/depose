@@ -37,6 +37,10 @@ class Player():
 
     def add_target_observer(self, obs):
         self.target_obs.append(obs)
+    
+    def remove_target_observer(self, obs):
+        if obs in self.target_obs:
+            self.target_obs.remove(obs)
 
     def add_state_observer(self, obs):
         self.state_obs.append(obs)

@@ -77,6 +77,18 @@ class Action():
         print("{}: {} is now listening (decorator_obs)".format(self.name, getattr(obs, "name", "Game")))
         self.dec_obs.append(obs)
 
+    def remove_observer(self, obs):
+        obs_list = self.get_observers()
+        if obs in obs_list:
+            print("{}: {} stopped listening".format(self.name, getattr(obs, "name", "Game")))
+            obs_list.remove(obs)
+
+    def remove_decorator_observer(self, obs):
+        obs_list = self.get_decorator_observers()
+        if obs in obs_list:
+            print("{}: {} stopped listening (decorator_obs)".format(self.name, getattr(obs, "name", "Game")))
+            obs_list.remove(obs)
+
     def get_observers(self):
         return self.obs
 
@@ -242,6 +254,7 @@ class ActionDecorator(Action):
     def stop_listening(self):
         """ Stop listening for future counter / challenge responses """
         for o in self.get_decorator_observers():
+            print("{}: Stopped listening to {}".format(self.name, getattr(o, "name", "Game")))
             o.remove_observer(self)
 
 
@@ -256,6 +269,7 @@ class TargetedAction(ActionDecorator):
 
     def receive_target(self, target):
         print("{}: Targeting".format(self.name), target)
+        self.actor.remove_target_observer(self)
         self.base_action.perform(target)
 
 
