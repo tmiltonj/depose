@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 
 from depose.model import Deck, Card
 from depose.player import Player
@@ -10,6 +10,17 @@ from depose.actions import (
 )
 
 @pytest.fixture
+def ui():
+    class UI():
+        def add_observer(self, obs):
+            pass
+
+        def remove_observer(self, obs):
+            pass
+
+    return UI()
+
+@pytest.fixture
 def deck():
     d = Deck()
     d.add(Card.LORD)
@@ -17,46 +28,35 @@ def deck():
     return d
 
 @pytest.fixture
-def player(deck):
-    p = Player("Test Player", deck=deck)
+def action_factory():
+    return ActionFactory()
+
+@pytest.fixture
+def player(deck, action_factory, ui):
+    p = Player("Test Player", deck, action_factory, ui)
     p.coins = 2
     p.add_card(Card.MEDIC)
     p.add_card(Card.MERCENARY)
     return p
 
 @pytest.fixture
-def target(deck):
-    p = Player("Test Target", deck=deck)
+def target(deck, action_factory, ui):
+    p = Player("Test Target", deck, action_factory, ui)
     p.coins = 3
     p.add_card(Card.BANDIT)
     p.add_card(Card.MEDIC)
     return p
 
 
-@pytest.fixture
-def action_factory(player):
-    af = ActionFactory()
-    return af
-
 def test_actionfactory(action_factory, player):
-    for action in Actions:
-        action_factory.create(action, player)
-
-    a = action_factory.create(Actions.SALARY, player)
-    assert a.name == Salary.name
-    a = action_factory.create(Actions.DONATIONS, player)
-    assert a.name == Donations.name
-    a = action_factory.create(Actions.TITHE, player)
-    assert a.name == Tithe.name
-    a = action_factory.create(Actions.DEPOSE, player)
-    assert a.name == Depose.name
-    a = action_factory.create(Actions.MUG, player)
-    assert a.name == Mug.name
-    a = action_factory.create(Actions.MURDER, player)
-    assert a.name == Murder.name
-    a = action_factory.create(Actions.DIPLOMACY, player)
-    assert a.name == Diplomacy.name
-
+    actions = [
+        "Salary", "Donations", "Tithe", "Depose",
+        "Mug", "Murder", "Diplomacy",
+        "Counter Donations", "Counter Mug", "Counter Murder"
+    ]
+    for action in actions:
+        act = action_factory.create(action, player)
+        assert act.name == action
 
 """ Test Base Actions """
 def test_salary(player):
@@ -80,11 +80,11 @@ def test_tithe(player):
     with pytest.raises(ValueError):
         a.perform(target=player)
 
-def test_depose(player):
+def test_depose(player, target):
     a = Depose(actor=player)
-    player.lose_life = Mock()
-    a.perform(target=player)
-    player.lose_life.assert_called_once()
+    target.lose_life = Mock()
+    a.perform(target=target)
+    target.lose_life.assert_called_once()
     with pytest.raises(ValueError):
         a.perform()
 
@@ -111,17 +111,6 @@ def test_murder(player):
     with pytest.raises(ValueError):
         a.perform()
 
-def test_diplomacy(player, deck):
-    deck.get = Mock(return_value=Card.BANDIT)
-    deck.add = Mock()
-    player._choose_card = Mock(side_effect=[Card.MERCENARY, Card.BANDIT])
-    a = Diplomacy(actor=player)
-
-    a.perform()
-    assert 2 == deck.get.call_count
-    assert 2 == deck.add.call_count
-    assert 2 == len(player.cards)
-
 
 """ Test Modifiers """
 @pytest.fixture
@@ -129,61 +118,67 @@ def action(player):
     a = Mug(actor=player)
     return a
 
-@pytest.fixture
-def game():
-    g = Mock()
-    g.ask_for_challenges = Mock()
-    g.ask_for_counters = Mock()
-    g.resolve_challenge = Mock()
-    return g
-
 def test_targeted(action, player, target):
-    player.choose_target = Mock(return_value=target)
+    player.choose_target = Mock()
     a = TargetedAction(action)
     a.perform()
-
     player.choose_target.assert_called_once()
-    assert 1 == target.coins
-    assert 4 == player.coins
 
-def test_counterable(player, action, target, game):
+def test_counterable(player, action, target):
+    action.perform = MagicMock()
     a = CounterableAction(action)
-    mock_counter = Mock()
-    a.get_counter_action = Mock(return_value=mock_counter)
+    mock_obs = MagicMock()
+    a.add_decorator_observer(mock_obs)
 
-    game.ask_for_counters.return_value = None
-    a.perform(target=target, game=game)
-    assert 1 == target.coins
-    assert 4 == player.coins
+    # Test that it asks for counter correctly
+    a.perform(target=target)
+    mock_obs.ask_for_counters.assert_called_once()
 
-    game.ask_for_counters.return_value = target
-    mock_counter.perform = Mock(return_value=Result.FAILURE)
-    assert Result.SUCCESS == a.perform(target=target, game=game), "Counter failed -> perform action"
+    # No counters > perform action normally
+    a.notify_decline()
+    action.perform.assert_called_once()
 
-    mock_counter.perform = Mock(return_value=Result.SUCCESS)
-    assert Result.FAILURE == a.perform(target=target, game=game), "Counter succeeded -> don't perform action"
+    # Counter accepted > check the counter action is performed
+    counter_action = MagicMock()
+    a.get_counter_action = MagicMock(return_value=counter_action)
+    a.notify_accept(target)
+    counter_action.perform.assert_called_once()
 
-    with pytest.raises(ValueError):
-        a.perform()
+    # Counter successful > don't perform base_action
+    action.perform.reset_mock()
+    a.action_success(None)
+    action.perform.assert_not_called()
 
-def test_questionable(player, action, target, game):
-    player.lose_life = Mock()
-    target.lose_life = Mock()
+    # Counter failed  > perform base_action
+    action.perform.reset_mock()
+    a.action_failed(None)
+    action.perform.assert_called_once()
+   
+
+def test_questionable(player, action, target):
+    action.perform = MagicMock()
     a = ChallengableAction(action)
+    mock_obs = MagicMock()
+    a.add_decorator_observer(mock_obs)
 
-    game.ask_for_challenges.return_value = None
-    assert Result.SUCCESS == a.perform(target=target, game=game)
-    assert 1 == target.coins
-    assert 4 == player.coins
+    # Test that it asks for counter correctly
+    a.perform(target=target)
+    mock_obs.ask_for_challenges.assert_called_once()
 
-    game.ask_for_challenges.return_value = target
-    game.resolve_challenge.return_value = Result.CHALLENGE_SUCCESS
-    assert Result.FAILURE == a.perform(target=target, game=game)
-    #player.lose_life.assert_called_once()
+    # No counters > perform action normally
+    a.notify_decline()
+    action.perform.assert_called_once()
 
-    game.resolve_challenge.return_value = Result.CHALLENGE_FAILURE
-    assert Result.SUCCESS == a.perform(target=target, game=game)
-    #target.lose_life.assert_called_once()
+    # Challenge accepted > check the challenge action is performed
+    a.notify_accept(target)
+    mock_obs.resolve_challenge.assert_called_once()
 
-    with pytest.raises(ValueError):
-        a.perform()
+    # Counter successful > don't perform base_action
+    action.perform.reset_mock()
+    a.challenge_success()
+    action.perform.assert_not_called()
+
+    # Counter failed  > perform base_action
+    action.perform.reset_mock()
+    a.challenge_failed()
+    action.perform.assert_called_once()
