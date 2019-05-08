@@ -1,6 +1,7 @@
 from tkinter import *
 from functools import partial
 from collections import namedtuple
+from copy import copy
 
 Option = namedtuple('Option', ['label', 'value'])
 
@@ -45,7 +46,7 @@ class GUI():
 
     def attach_player_panel(self, players):
         self.player_panel = PlayerPanel(self.frame, players)
-        self.player_panel.frame.grid(row=0, column=2, sticky=W+E+N+S, ipadx=70, rowspan=2)
+        self.player_panel.frame.grid(row=0, column=2, sticky=W+E+N+S, ipadx=0, rowspan=2)
 
     def mainloop(self):
         self.master.mainloop()
@@ -64,8 +65,8 @@ class GUI():
         self.state = state
         self.state.update_view()
 
-    def update_active_player(self, ind):
-        self.player_panel.set_active(ind)
+    def update_active_player(self, player):
+        self.player_panel.set_active(player)
 
     def get_frame(self):
         if self.dynamic_frame:
@@ -140,59 +141,99 @@ class OptionListState(GUIState):
             b.grid(row=1 + int(col / NUM_COLS), column=(col % NUM_COLS), sticky=W+E+N+S, pady=5)
 
 
-class PlayerPanel():
-    MAX_PLAYERS = 6
+class PlayerBox():
     IDLE_COLOUR = rgb(210, 210, 220)
     ACTIVE_COLOUR = rgb(200, 250, 200)
+    FOCUS_COLOUR = rgb(200, 200, 230)
     DEAD_COLOUR = rgb(150, 150, 150)
-    
-    def __init__(self, master, players):
-        self.players = players
-        self.active_player = 0
-        self.panels = []
+    LABEL_WIDTH = 10
 
+    def __init__(self, master, player):
+        self.player = player
+
+        self._box = Frame(
+            master,
+            background=self.IDLE_COLOUR,
+            borderwidth=2, relief=SUNKEN,
+        )
+        self._box.grid_rowconfigure(0, weight=1)
+        self._box.grid_rowconfigure(1, weight=1)
+        self._box.grid_columnconfigure(0, weight=1)
+        self._box.grid_columnconfigure(1, weight=1)
+
+        self.card_a = Label(self.box, width=self.LABEL_WIDTH, bg=self.IDLE_COLOUR)
+        self.card_b = Label(self.box, width=self.LABEL_WIDTH, bg=self.IDLE_COLOUR)
+        self.name_label = Label(self.box, text=self.player.name, width=self.LABEL_WIDTH, bg=self.IDLE_COLOUR)
+        self.coin_label = Label(self.box, width=self.LABEL_WIDTH, bg=self.IDLE_COLOUR)
+
+        self.labels = [self.card_a, self.card_b, self.name_label, self.coin_label]
+        self.update()
+
+        self.card_a.grid(row=0, column=0)
+        self.card_b.grid(row=1, column=0)
+        self.name_label.grid(row=0, column=1)
+        self.coin_label.grid(row=1, column=1)
+
+    @property
+    def box(self):
+        return self._box
+
+    def update(self, myturn=False, focused=False):
+        self.set_bg_color(self.IDLE_COLOUR)
+        self.card_a.config(text="")
+        self.card_b.config(text="")
+
+        if len(self.player.cards) == 0:
+            self.set_bg_color(self.DEAD_COLOUR)
+        else:
+            if len(self.player.cards) >= 1:
+                self.card_a.config(text=self.player.cards[0].name)
+            if len(self.player.cards) >= 2:
+                self.card_b.config(text=self.player.cards[1].name)
+
+        self.coin_label.config(text="Coins: {}".format(self.player.coins))
+
+        if focused == True:
+            self.set_bg_color(self.FOCUS_COLOUR)
+            for label in self.labels:
+                label.config(borderwidth=4, relief=RAISED)
+        else:
+            for label in self.labels:
+                label.config(borderwidth=2, relief=FLAT)
+
+        if myturn == True:
+            self.set_bg_color(self.ACTIVE_COLOUR)
+
+    def set_bg_color(self, color):
+        for label in self.labels:
+            label.config(bg=color)
+
+        self.box.config(bg=color)
+
+
+class PlayerPanel():
+    MAX_PLAYERS = 6
+
+    def __init__(self, master, players):
         self.frame = Frame(master)
         self.frame.grid_columnconfigure(0, weight=1)
 
-        for i in range(self.MAX_PLAYERS):
-            self.panels.append(Frame(
-                self.frame, 
-                background=(self.IDLE_COLOUR if i < len(players) else self.DEAD_COLOUR),
-                borderwidth=2, relief=SUNKEN
-            ))
+        self.player_boxes = []
+        for row, p in enumerate(players):
+            player_box = PlayerBox(self.frame, p)
+            self.player_boxes.append(player_box)
 
-            self.frame.grid_rowconfigure(i, weight=1)
-            self.panels[i].grid(row=i, sticky=W+E+N+S)
+            self.frame.grid_rowconfigure(row, weight=1)
+            player_box.box.grid(row=row, column=0, ipadx=70, sticky=W+E+N+S)
 
-    def set_active(self, index):
-        self.panels[self.active_player].config(
-            background=self.IDLE_COLOUR
-        )
+        self.active_player = None
 
-        self.panels[index].config(
-            background=self.ACTIVE_COLOUR
-        )
-
-        self.active_player = index
+    def set_active(self, player):
+        self.active_player = player
         self.update()
 
     def update(self):
-        for panel, player in zip(self.panels, self.players):
-            bg = panel.cget('background')
-            card_a = ""
-            card_b = ""
-            if len(player.cards) > 0:
-                card_a = player.cards[0].name
-                if len(player.cards) > 1:
-                    card_b = player.cards[1].name
-
-            Label(panel, bg=bg, text=card_a).grid(row=0, column=0)
-            Label(panel, bg=bg, text=card_b).grid(row=1, column=0)
-            Label(panel, bg=bg, text=player.name).grid(row=0, column=1)
-            Label(panel, bg=bg, text="Coins: {}".format(player.coins)).grid(row=1, column=1)
-
-            panel.grid_rowconfigure(0, weight=1)
-            panel.grid_rowconfigure(1, weight=1)
-            panel.grid_columnconfigure(0, weight=1)
-            panel.grid_columnconfigure(1, weight=1)
-
+        for box in self.player_boxes:
+            is_active = box.player == self.active_player
+            box.update(myturn=is_active)
+ 
