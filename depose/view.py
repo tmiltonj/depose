@@ -24,8 +24,17 @@ class GUI():
         frame.grid_columnconfigure(1, weight=0)
         self.frame = frame
 
-        self.text = Text(self.frame, state=DISABLED, width=50)
+        scrollbar = Scrollbar(self.frame)
+        scrollbar.grid(row=0, column=1, sticky=W+E+N+S)
+        self.text = Text(
+            self.frame, 
+            state=DISABLED, 
+            width=50,
+            yscrollcommand=scrollbar.set
+        )
         self.text.grid(row=0, column=0, sticky=W+E+N+S)
+
+        scrollbar.config(command=self.text.yview)
 
         self.dynamic_frame = None
         self.get_frame()
@@ -36,7 +45,7 @@ class GUI():
 
     def attach_player_panel(self, players):
         self.player_panel = PlayerPanel(self.frame, players)
-        self.player_panel.frame.grid(row=0, column=1, sticky=W+E+N+S, ipadx=70, rowspan=2)
+        self.player_panel.frame.grid(row=0, column=2, sticky=W+E+N+S, ipadx=70, rowspan=2)
 
     def mainloop(self):
         self.master.mainloop()
@@ -55,6 +64,9 @@ class GUI():
         self.state = state
         self.state.update_view()
 
+    def update_active_player(self, ind):
+        self.player_panel.set_active(ind)
+
     def get_frame(self):
         if self.dynamic_frame:
             return self.dynamic_frame
@@ -72,6 +84,7 @@ class GUI():
         self.text.insert(END, text)
         self.text.insert(END, '\n')
         self.text.config(state=DISABLED)
+        self.text.see(END)
 
     def add_observer(self, obs):
         print("GUI: Adding", getattr(obs, "name", obs.__class__), "as an obs")
@@ -166,8 +179,15 @@ class PlayerPanel():
     def update(self):
         for panel, player in zip(self.panels, self.players):
             bg = panel.cget('background')
-            Label(panel, bg=bg, text="Card A").grid(row=0, column=0)
-            Label(panel, bg=bg, text="Card B").grid(row=1, column=0)
+            card_a = ""
+            card_b = ""
+            if len(player.cards) > 0:
+                card_a = player.cards[0].name
+                if len(player.cards) > 1:
+                    card_b = player.cards[1].name
+
+            Label(panel, bg=bg, text=card_a).grid(row=0, column=0)
+            Label(panel, bg=bg, text=card_b).grid(row=1, column=0)
             Label(panel, bg=bg, text=player.name).grid(row=0, column=1)
             Label(panel, bg=bg, text="Coins: {}".format(player.coins)).grid(row=1, column=1)
 

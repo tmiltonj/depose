@@ -20,6 +20,8 @@ class Game():
             self.active_ind = 0
         active_player = self.players[self.active_ind]
 
+        self.ui.update_active_player(self.active_ind)
+
         self.message("{}'s TURN".format(active_player.name))
         active_player.choose_action()
 
