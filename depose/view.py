@@ -15,14 +15,16 @@ class GUI():
         master = Tk()
         master.grid_rowconfigure(0, weight=1)
         master.grid_columnconfigure(0, weight=1)
+        master.minsize(width=500, height=200)
         self.master = master
 
         frame = Frame(master)
         frame.grid(sticky=W+E+N+S)
-        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_rowconfigure(0, weight=1, minsize=50)
         frame.grid_rowconfigure(1, weight=0, minsize=120)
-        frame.grid_columnconfigure(0, weight=1, minsize=440)
+        frame.grid_columnconfigure(0, weight=1, minsize=300)
         frame.grid_columnconfigure(1, weight=0)
+        frame.grid_columnconfigure(2, weight=1, minsize=180)
         self.frame = frame
 
         scrollbar = Scrollbar(self.frame)
@@ -73,7 +75,7 @@ class GUI():
             return self.dynamic_frame
         else:
             self.dynamic_frame = Frame(self.frame, height=60)
-            self.dynamic_frame.grid(row=1, column=0)
+            self.dynamic_frame.grid(row=1, column=0, columnspan=2)
             self.dynamic_frame.grid_rowconfigure(0, weight=1)
             self.dynamic_frame.grid_rowconfigure(1, weight=1)
             self.dynamic_frame.grid_rowconfigure(2, weight=1)
@@ -224,7 +226,7 @@ class PlayerPanel():
             self.player_boxes.append(player_box)
 
             self.frame.grid_rowconfigure(row, weight=1)
-            player_box.box.grid(row=row, column=0, ipadx=70, sticky=W+E+N+S)
+            player_box.box.grid(row=row, column=0, ipadx=0, sticky=W+E+N+S)
 
         self.active_player = None
 
