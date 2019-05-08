@@ -8,9 +8,9 @@ class ActionFactory():
             'MUG': self.mug,
             'MURDER': self.murder,
             'DIPLOMACY': self.diplomacy,
-            'COUNTER_DONATIONS': self.counter_donations,
-            'COUNTER_MUG': self.counter_mug,
-            'COUNTER_MURDER': self.counter_murder
+            'COUNTER DONATIONS': self.counter_donations,
+            'COUNTER MUG': self.counter_mug,
+            'COUNTER MURDER': self.counter_murder
         }
 
         return action_map[action.upper()](actor)
@@ -302,17 +302,17 @@ class CounterableAction(ActionDecorator):
 
     def get_counter_action(self, actor):
         """ Return matching counter-action """
-        if self.name == "donations":
-            name = "block donations"
-        elif self.name == "mug":
-            name = "block mug"
-        elif self.name == "murder":
-            name = "block murder"
+        af = ActionFactory()
+        if self.name == "Donations":
+            counter = af.counter_donations(actor)
+        elif self.name == "Mug":
+            counter = af.counter_mug(actor)
+        elif self.name == "Murder":
+            counter = af.counter_murder(actor)
         else:
             raise ValueError("Action has no counter")
 
-        a = Action(name=name, actor=actor)
-        return ChallengableAction(base_action=a)
+        return counter
 
     def notify_accept(self, opponent):
         """ Counter accepted. Create, perform and listen to the counter-action """
