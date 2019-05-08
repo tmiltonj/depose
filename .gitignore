@@ -4,6 +4,8 @@ __pycache__/
 
 # Unittest files
 .pytest_cache/
+.coverage
+htmlcov/
 
 # Editor files
 .vscode/
