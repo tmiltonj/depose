@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, call
 
 from depose.model import Deck, Card
 from depose.player import Player
@@ -111,6 +111,19 @@ def test_murder(player):
     with pytest.raises(ValueError):
         a.perform()
 
+def test_diplomacy(player):
+    player.return_card = MagicMock()
+    dip = Diplomacy(actor=player)
+    dip.perform()
+
+    assert 1 == player.return_card.call_count
+    player._return_card(Card.MEDIC)
+
+    assert 2 == player.return_card.call_count
+    player._return_card(Card.MERCENARY)
+
+    assert 2 == player.return_card.call_count
+
 
 """ Test Modifiers """
 @pytest.fixture
@@ -153,7 +166,30 @@ def test_counterable(player, action, target):
     action.perform.reset_mock()
     a.action_failed(None)
     action.perform.assert_called_once()
-   
+
+def test_get_counter_action(player, target, action, action_factory):
+    donations = action_factory.donations(player)
+    mug = action_factory.mug(player)
+    murder = action_factory.murder(player)
+
+    counterable = CounterableAction(donations)
+    counter = counterable.get_counter_action(target)
+    assert target.name == counter.actor.name
+    assert "Counter Donations" == counter.name
+
+    counterable = CounterableAction(mug)
+    counter = counterable.get_counter_action(target)
+    assert "Counter Mug" == counter.name
+
+    counterable = CounterableAction(murder)
+    counter = counterable.get_counter_action(target)
+    assert "Counter Murder" == counter.name
+
+    with pytest.raises(ValueError):
+        counterable = CounterableAction(
+            action_factory.diplomacy(player)
+        )
+        counterable.get_counter_action(target)
 
 def test_questionable(player, action, target):
     action.perform = MagicMock()
