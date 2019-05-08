@@ -71,11 +71,14 @@ class Player():
         return cl
 
     def return_card(self, card=None):
-        self.wait_for_input(
-            "Select a card to return",
-            self._cardlist(),
-            self._return_card
-        )
+        if card is not None:
+            self._return_card(card)
+        else:
+            self.wait_for_input(
+                "Select a card to return",
+                self._cardlist(),
+                self._return_card
+            )
 
     def _return_card(self, card):
         try:
@@ -84,7 +87,7 @@ class Player():
             for o in self.state_obs:
                 o.notify_return_card(self, card)
         except ValueError:
-            print("{}: {} is not in {}".format(self.name, card, self.cards))
+            raise ValueError("{}: {} is not in {}".format(self.name, card, self.cards))
 
     def resolve_challenge(self, action):
         self.wait_for_input(
@@ -169,7 +172,7 @@ class Player():
         )
 
     def ask_to_challenge(self, action):
-        choice = self.wait_for_input(
+        self.wait_for_input(
             "{}, challenge {}'s {}?".format(self.name, action.actor.name, action.name),
             [Option("Yes", True), Option("No", False)],
             self.receive_response
