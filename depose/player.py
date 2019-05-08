@@ -109,6 +109,8 @@ class Player():
     
     def _lose_life(self, card):
         self.cards.remove(card)
+        for o in self.state_obs:
+            o.notify_lose_life(self)
 
     def choose_action(self):
         actionlist = self._get_valid_actions()

@@ -1,4 +1,5 @@
 from functools import partial
+from collections import deque
 
 from depose.model import Card
 from depose.player import Player
@@ -12,18 +13,15 @@ class Game():
 
         self.ui = ui
         self.obs = []
-        self.active_ind = -1
+        self.turn_queue = deque(players)
 
     def play(self):
-        self.active_ind += 1
-        if (self.active_ind >= len(self.players)):
-            self.active_ind = 0
-        active_player = self.players[self.active_ind]
+        self.active_player = self.turn_queue.popleft()
 
-        self.ui.update_active_player(self.active_ind)
+        self.ui.update_active_player(self.active_player)
 
-        self.message("{}'s TURN".format(active_player.name))
-        active_player.choose_action()
+        self.message("{}'s TURN".format(self.active_player.name))
+        self.active_player.choose_action()
 
     def message(self, message):
         self.ui.message("GAME: {}".format(message))
@@ -37,10 +35,19 @@ class Game():
 
     def action_success(self, action):
         self.message("{} succeeded!\n".format(action.name))
-        self.play()
+        self.cleanup()
 
     def action_failed(self, action):
         self.message("{} failed :(\n".format(action.name))
+        self.cleanup()
+
+    def cleanup(self):
+        self.turn_queue.append(self.active_player)
+        for p in self.players:
+            if p in self.turn_queue and len(p.cards) == 0:
+                self.message("{} has no more cards and was eliminated!\n".format(p.name))
+                self.turn_queue.remove(p)
+
         self.play()
 
     def add_observer(self, obs):
@@ -110,12 +117,27 @@ class Game():
         self.message("{} revealed {}!".format(actor.name, card.name))
         if self.can_perform(card, self.action):
             self.message("{} was wrong and lost a life!\n".format(self.challenger.name))
-            for o in self.obs:
-                o.challenge_failed()
+            self.challenge_result = self._challenge_failure
+            wrong_player = self.challenger
         else:
             self.message("{} cannot perform {} and loses a life!\n".format(actor.name, self.action.name))
-            for o in self.obs:
-                o.challenge_success()
+            self.challenge_result = self._challenge_success
+            wrong_player = actor
+
+        wrong_player.add_state_observer(self)
+        wrong_player.lose_life()
+
+    def notify_lose_life(self, source):
+        source.remove_state_observer(self)
+        self.challenge_result()
+
+    def _challenge_failure(self):
+        for o in self.obs:
+            o.challenge_failed()
+    
+    def _challenge_success(self):
+        for o in self.obs:
+            o.challenge_success()
 
     def can_perform(self, card, action):
         """ Test if card can perform a given action """
