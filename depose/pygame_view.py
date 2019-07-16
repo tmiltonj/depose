@@ -1,4 +1,5 @@
 import pygame
+import pygame.freetype
 import math
 
 pygame.init()
@@ -46,6 +47,44 @@ class PlayerCard:
         # Draw player card
         surface.blit(player_card, pygame.Rect(x - width / 2, y - height / 2, width, height))
 
+class Sidebar:
+    width = 200
+    height = 600
+    bg_color = sidebar_bg
+    line_length = 25
+    max_lines = 28
+
+    class Entry:
+        def __init__(self, text, color):
+            self.text = text
+            self.color = color
+
+    def __init__(self):
+        self.entries = []
+        self.font = pygame.freetype.Font('Retron2000.ttf', size=14)
+        self.font.pad = True
+
+    def log(self, message, color=bg_color):
+        line = ''
+        for word in message.split(' '):
+            print(word)
+            if (line == '') or (len(line) + len(word) < Sidebar.line_length):
+                line += word + ' '
+            else:
+                self.entries.append(Sidebar.Entry(line, color))
+                line = word + ' '
+        self.entries.append(Sidebar.Entry(line, color))
+
+    def draw(self, surface):
+        sidebar = pygame.Surface((Sidebar.width, Sidebar.height))
+        sidebar.fill(Sidebar.bg_color)
+        for line, entry in enumerate(self.entries[-Sidebar.max_lines:]):
+            render, _ = self.font.render(entry.text, fgcolor=(255, 255, 255), bgcolor=entry.color)
+            sidebar.blit(render, (5, 5 + line * 20))
+
+        surface.blit(sidebar, (0, 0))
+
+
 # Main canvas
 size = width, height = (800, 600)
 screen = pygame.display.set_mode(size)
@@ -60,6 +99,13 @@ action = pygame.Surface((action_w, action_h))
 sidebar_w, sidebar_h = (200, 600)
 sidebar = pygame.Surface((sidebar_w, sidebar_h))
 
+# Test Sidebar
+bar = Sidebar()
+bar.log("foo")
+bar.log("bar", color=(0, 0, 0))
+import random
+for i in range(20):
+    bar.log("I move my mouth away from the mic to breathe", color=(random.randrange(90, 160), 80, random.randrange(10, 90)))
 
 def draw_player_cards(players, surface, x, y):
     angle = 2 * math.pi / len(players)
@@ -87,6 +133,7 @@ while running:
     sidebar.fill(sidebar_bg)
 
     draw_player_cards(['a', 'b', 'c', 'd', 'e', 'f'], table, table_w / 2, table_h / 2)
+    bar.draw(sidebar)
     #draw_player_cards(['a', 'b', 'c', 'd', 'e'], table, table_w / 2, table_h / 2)
 
     # Draw views to main canvas
