@@ -67,7 +67,6 @@ class Sidebar:
     def log(self, message, color=bg_color):
         line = ''
         for word in message.split(' '):
-            print(word)
             if (line == '') or (len(line) + len(word) < Sidebar.line_length):
                 line += word + ' '
             else:
@@ -83,6 +82,69 @@ class Sidebar:
             sidebar.blit(render, (5, 5 + line * 20))
 
         surface.blit(sidebar, (0, 0))
+
+class InputBox:
+    width = 600
+    height = 150
+    bg_color = action_bg
+
+    class Option:
+        width = 80
+        height = 100
+
+        def __init__(self, label, color=(255, 0, 0), image=None):
+            self.label = label
+            self.color = color
+            self.image = image
+
+        def render(self, x, y):
+            width = InputBox.Option.width
+            height = InputBox.Option.height
+            surface = pygame.Surface((width, height))
+            if pygame.Rect(x, y, width, height).collidepoint(pygame.mouse.get_pos()):
+                surface.fill((255, 255, 255))
+            else:
+                surface.fill((0, 0, 0))
+
+
+            font = pygame.freetype.Font('Retron2000.ttf', size=20)
+            font.pad = True
+            label_render, label_rect = font.render(self.label, bgcolor=self.color)
+            surface.blit(label_render, (InputBox.Option.width / 2 - label_rect.width / 2, 100 - label_rect.height))
+
+            return surface
+
+    def __init__(self):
+        self.active = False
+        self.font = pygame.freetype.Font('Retron2000.ttf', size=20)
+        self.options = []
+
+    def show_menu(self, prompt, options):
+        self.active = True
+        self.options = options
+        self.render, _ = self.font.render(prompt, fgcolor=(0, 0, 0))
+
+    def draw(self, surface):
+        if not self.active:
+            return
+
+        inputbox = pygame.Surface((InputBox.width, InputBox.height))
+        inputbox.fill(InputBox.bg_color)
+
+        # Show prompt
+        inputbox.blit(self.render, ((inputbox.get_width() / 2) - (self.render.get_width() / 2), 10))
+
+        # Show options
+        num_options = 7
+        for ii in range(num_options):
+            option = InputBox.Option('Choice', ((ii % 3 + 1) * 70, ii % 2 * 255, ii % 6 * 50))
+
+            box_width = 570 / num_options
+            x_pos = 15 + box_width * ii + (box_width / 2)
+            #pygame.draw.rect(inputbox, (0, 0, 0), pygame.Rect(x_pos - 40, 35, 80, 100), 1)
+            inputbox.blit(option.render(x_pos - 40, 450 + 35), (x_pos - 40, 35))
+
+        surface.blit(inputbox, (0, 0))
 
 
 # Main canvas
@@ -120,6 +182,10 @@ def draw_player_cards(players, surface, x, y):
         y_draw = y + y_dist * math.cos(ii * angle)
         PlayerCard.draw(surface, player, x_draw, y_draw, active=(ii == 4))
 
+# Test InputBox
+box = InputBox()
+box.show_menu("Choose an Action:", [])
+
 running = True
 while running:
     for event in pygame.event.get():
@@ -134,7 +200,7 @@ while running:
 
     draw_player_cards(['a', 'b', 'c', 'd', 'e', 'f'], table, table_w / 2, table_h / 2)
     bar.draw(sidebar)
-    #draw_player_cards(['a', 'b', 'c', 'd', 'e'], table, table_w / 2, table_h / 2)
+    box.draw(action)
 
     # Draw views to main canvas
     screen.blit(table, (0, 0))
