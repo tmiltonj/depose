@@ -83,25 +83,69 @@ class Sidebar:
 
         surface.blit(sidebar, (0, 0))
 
+class ControlManager:
+    _instance = None
+
+    def __init__(self):
+        if ControlManager._instance is not None:
+            raise RuntimeError("Singleton already exists")
+
+        ControlManager._instance = self
+        self.controls = []
+
+    @classmethod
+    def instance(cls):
+        if cls._instance is not None:
+            return cls._instance
+        else:
+            return cls()
+
+    def add_control(self, control):
+        self.controls.append(control)
+
+    def remove_control(self, control):
+        self.controls.remove(control)
+
+    def update_onclick(self, mouse_pos):
+        for control in self.controls:
+            if control.rect.collidepoint(mouse_pos):
+                control.onclick()
+
+class Control:
+    def __init__(self, rect):
+        self._rect = rect
+
+    @property
+    def rect(self):
+        return self._rect
+
+    @rect.setter
+    def rect(self, value):
+        self._rect = value
+
+    def onclick(self):
+        print(self, "was clicked")
+
 class InputBox:
     width = 600
     height = 150
     bg_color = action_bg
 
-    class Option:
+    class Option(Control):
         width = 80
         height = 100
 
-        def __init__(self, label, color=(255, 0, 0), image=None):
+        def __init__(self, pos, label, color=(255, 0, 0), image=None):
+            super().__init__(pygame.Rect(pos, (self.width, self.height)))
             self.label = label
             self.color = color
             self.image = image
 
-        def render(self, x, y):
+        def render(self, target):
             width = InputBox.Option.width
             height = InputBox.Option.height
             surface = pygame.Surface((width, height))
-            if pygame.Rect(x, y, width, height).collidepoint(pygame.mouse.get_pos()):
+            if self.rect.collidepoint(pygame.mouse.get_pos()):
                 surface.fill((255, 255, 255))
             else:
                 surface.fill((0, 0, 0))
@@ -112,7 +156,11 @@ class InputBox:
             label_render, label_rect = font.render(self.label, bgcolor=self.color)
             surface.blit(label_render, (InputBox.Option.width / 2 - label_rect.width / 2, 100 - label_rect.height))
 
-            return surface
+            target.blit(surface, self.rect.move(0, -450))
+
+        def onclick(self):
+            print(self.label, "was clicked")
+
 
     def __init__(self):
         self.active = False
@@ -121,8 +169,16 @@ class InputBox:
 
     def show_menu(self, prompt, options):
         self.active = True
-        self.options = options
         self.render, _ = self.font.render(prompt, fgcolor=(0, 0, 0))
+        
+        options = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] #options
+        cm = ControlManager.instance()
+        box_width = 570 / len(options)
+        for ii, option in enumerate(options):
+            x_pos = 15 + box_width * ii + (box_width / 2)
+            opt = InputBox.Option((x_pos - 40, 450 + 35), 'Choice', ((ii % 3 + 1) * 70, ii % 2 * 255, ii % 6 * 50))
+            self.options.append(opt)
+            cm.add_control(opt)
 
     def draw(self, surface):
         if not self.active:
@@ -135,17 +191,10 @@ class InputBox:
         inputbox.blit(self.render, ((inputbox.get_width() / 2) - (self.render.get_width() / 2), 10))
 
         # Show options
-        num_options = 7
-        for ii in range(num_options):
-            option = InputBox.Option('Choice', ((ii % 3 + 1) * 70, ii % 2 * 255, ii % 6 * 50))
-
-            box_width = 570 / num_options
-            x_pos = 15 + box_width * ii + (box_width / 2)
-            #pygame.draw.rect(inputbox, (0, 0, 0), pygame.Rect(x_pos - 40, 35, 80, 100), 1)
-            inputbox.blit(option.render(x_pos - 40, 450 + 35), (x_pos - 40, 35))
+        for option in self.options:
+            option.render(inputbox)
 
         surface.blit(inputbox, (0, 0))
-
 
 # Main canvas
 size = width, height = (800, 600)
@@ -186,9 +235,17 @@ def draw_player_cards(players, surface, x, y):
 box = InputBox()
 box.show_menu("Choose an Action:", [])
 
+# Test controls
+cm = ControlManager.instance()
+
 running = True
 while running:
+    # Process event queue
     for event in pygame.event.get():
+        # Check if UI elements are left-clicked
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            cm.update_onclick(event.pos)
+
         if event.type == pygame.QUIT:
             running = False
 
