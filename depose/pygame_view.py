@@ -19,11 +19,12 @@ class Card:
         surface.fill(Card.color, pygame.Rect(x, y, Card.width, Card.height))
 
 class PlayerCard:
+    """ Shows info about a Player's cards, coins and name """
     width = 180
     height = 140
     bg_color = table_bg
 
-    def draw(surface, player, x, y, active=False):
+    def render(player, active=False):
         width = PlayerCard.width
         height = PlayerCard.height
         player_card = pygame.Surface((width, height))
@@ -45,9 +46,11 @@ class PlayerCard:
         pygame.draw.rect(player_card, (255, 255, 255), pygame.Rect(130, 10, 40, 40), 1)
 
         # Draw player card
-        surface.blit(player_card, pygame.Rect(x - width / 2, y - height / 2, width, height))
+        return player_card
+
 
 class Sidebar:
+    """ Displays log messages about the game state """
     width = 200
     height = 600
     bg_color = sidebar_bg
@@ -65,6 +68,7 @@ class Sidebar:
         self.font.pad = True
 
     def log(self, message, color=bg_color):
+        """ Adds a new message to sidebar, splitting long lines on spaces """
         line = ''
         for word in message.split(' '):
             if (line == '') or (len(line) + len(word) < Sidebar.line_length):
@@ -74,14 +78,15 @@ class Sidebar:
                 line = word + ' '
         self.entries.append(Sidebar.Entry(line, color))
 
-    def draw(self, surface):
+    def render(self):
+        """ Returns a surface with log entries rendered to it """
         sidebar = pygame.Surface((Sidebar.width, Sidebar.height))
         sidebar.fill(Sidebar.bg_color)
         for line, entry in enumerate(self.entries[-Sidebar.max_lines:]):
             render, _ = self.font.render(entry.text, fgcolor=(255, 255, 255), bgcolor=entry.color)
             sidebar.blit(render, (5, 5 + line * 20))
 
-        surface.blit(sidebar, (0, 0))
+        return sidebar
 
 class ControlManager:
     _instance = None
@@ -229,7 +234,8 @@ def draw_player_cards(players, surface, x, y):
     for ii, player in enumerate(players):
         x_draw = x + x_dist * math.sin(ii * angle)
         y_draw = y + y_dist * math.cos(ii * angle)
-        PlayerCard.draw(surface, player, x_draw, y_draw, active=(ii == 4))
+        player_card = PlayerCard.render(player, active=(ii == 4))
+        surface.blit(player_card, (x_draw - box_w / 2, y_draw - box_h / 2))
 
 # Test InputBox
 box = InputBox()
@@ -253,16 +259,16 @@ while running:
     screen.fill(black)
     table.fill(table_bg)
     action.fill(action_bg)
-    sidebar.fill(sidebar_bg)
+    #sidebar.fill(sidebar_bg)
 
     draw_player_cards(['a', 'b', 'c', 'd', 'e', 'f'], table, table_w / 2, table_h / 2)
-    bar.draw(sidebar)
+    #bar.draw(sidebar)
     box.draw(action)
 
     # Draw views to main canvas
     screen.blit(table, (0, 0))
     screen.blit(action, (0, 450))
-    screen.blit(sidebar, (600, 0))
+    screen.blit(bar.render(), (600, 0))
 
     # Show display
     pygame.display.flip()
